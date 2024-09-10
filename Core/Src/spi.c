@@ -28,6 +28,10 @@ uint8_t spiRxFinished = 1;
 
 /* USER CODE END 0 */
 
+SPI_HandleTypeDef hspi1;
+DMA_HandleTypeDef hdma_spi1_rx;
+DMA_HandleTypeDef hdma_spi1_tx;
+
 /* SPI1 init function */
 void MX_SPI1_Init(void)
 {
@@ -36,95 +40,27 @@ void MX_SPI1_Init(void)
 
   /* USER CODE END SPI1_Init 0 */
 
-  LL_SPI_InitTypeDef SPI_InitStruct = {0};
-
-  LL_GPIO_InitTypeDef GPIO_InitStruct = {0};
-
-  /* Peripheral clock enable */
-  LL_APB2_GRP1_EnableClock(LL_APB2_GRP1_PERIPH_SPI1);
-
-  LL_AHB2_GRP1_EnableClock(LL_AHB2_GRP1_PERIPH_GPIOA);
-  /**SPI1 GPIO Configuration
-  PA5   ------> SPI1_SCK
-  PA6   ------> SPI1_MISO
-  PA7   ------> SPI1_MOSI
-  */
-  GPIO_InitStruct.Pin = LL_GPIO_PIN_5;
-  GPIO_InitStruct.Mode = LL_GPIO_MODE_ALTERNATE;
-  GPIO_InitStruct.Speed = LL_GPIO_SPEED_FREQ_VERY_HIGH;
-  GPIO_InitStruct.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
-  GPIO_InitStruct.Pull = LL_GPIO_PULL_NO;
-  GPIO_InitStruct.Alternate = LL_GPIO_AF_5;
-  LL_GPIO_Init(GPIOA, &GPIO_InitStruct);
-
-  GPIO_InitStruct.Pin = LL_GPIO_PIN_6;
-  GPIO_InitStruct.Mode = LL_GPIO_MODE_ALTERNATE;
-  GPIO_InitStruct.Speed = LL_GPIO_SPEED_FREQ_VERY_HIGH;
-  GPIO_InitStruct.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
-  GPIO_InitStruct.Pull = LL_GPIO_PULL_NO;
-  GPIO_InitStruct.Alternate = LL_GPIO_AF_5;
-  LL_GPIO_Init(GPIOA, &GPIO_InitStruct);
-
-  GPIO_InitStruct.Pin = LL_GPIO_PIN_7;
-  GPIO_InitStruct.Mode = LL_GPIO_MODE_ALTERNATE;
-  GPIO_InitStruct.Speed = LL_GPIO_SPEED_FREQ_VERY_HIGH;
-  GPIO_InitStruct.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
-  GPIO_InitStruct.Pull = LL_GPIO_PULL_NO;
-  GPIO_InitStruct.Alternate = LL_GPIO_AF_5;
-  LL_GPIO_Init(GPIOA, &GPIO_InitStruct);
-
-  /* SPI1 DMA Init */
-
-  /* SPI1_RX Init */
-  LL_DMA_SetPeriphRequest(DMA2, LL_DMA_CHANNEL_4, LL_DMAMUX_REQ_SPI1_RX);
-
-  LL_DMA_SetDataTransferDirection(DMA2, LL_DMA_CHANNEL_4, LL_DMA_DIRECTION_PERIPH_TO_MEMORY);
-
-  LL_DMA_SetChannelPriorityLevel(DMA2, LL_DMA_CHANNEL_4, LL_DMA_PRIORITY_HIGH);
-
-  LL_DMA_SetMode(DMA2, LL_DMA_CHANNEL_4, LL_DMA_MODE_NORMAL);
-
-  LL_DMA_SetPeriphIncMode(DMA2, LL_DMA_CHANNEL_4, LL_DMA_PERIPH_NOINCREMENT);
-
-  LL_DMA_SetMemoryIncMode(DMA2, LL_DMA_CHANNEL_4, LL_DMA_MEMORY_INCREMENT);
-
-  LL_DMA_SetPeriphSize(DMA2, LL_DMA_CHANNEL_4, LL_DMA_PDATAALIGN_HALFWORD);
-
-  LL_DMA_SetMemorySize(DMA2, LL_DMA_CHANNEL_4, LL_DMA_MDATAALIGN_HALFWORD);
-
-  /* SPI1_TX Init */
-  LL_DMA_SetPeriphRequest(DMA2, LL_DMA_CHANNEL_5, LL_DMAMUX_REQ_SPI1_TX);
-
-  LL_DMA_SetDataTransferDirection(DMA2, LL_DMA_CHANNEL_5, LL_DMA_DIRECTION_MEMORY_TO_PERIPH);
-
-  LL_DMA_SetChannelPriorityLevel(DMA2, LL_DMA_CHANNEL_5, LL_DMA_PRIORITY_HIGH);
-
-  LL_DMA_SetMode(DMA2, LL_DMA_CHANNEL_5, LL_DMA_MODE_NORMAL);
-
-  LL_DMA_SetPeriphIncMode(DMA2, LL_DMA_CHANNEL_5, LL_DMA_PERIPH_NOINCREMENT);
-
-  LL_DMA_SetMemoryIncMode(DMA2, LL_DMA_CHANNEL_5, LL_DMA_MEMORY_INCREMENT);
-
-  LL_DMA_SetPeriphSize(DMA2, LL_DMA_CHANNEL_5, LL_DMA_PDATAALIGN_HALFWORD);
-
-  LL_DMA_SetMemorySize(DMA2, LL_DMA_CHANNEL_5, LL_DMA_MDATAALIGN_HALFWORD);
-
   /* USER CODE BEGIN SPI1_Init 1 */
 
   /* USER CODE END SPI1_Init 1 */
-  SPI_InitStruct.TransferDirection = LL_SPI_FULL_DUPLEX;
-  SPI_InitStruct.Mode = LL_SPI_MODE_MASTER;
-  SPI_InitStruct.DataWidth = LL_SPI_DATAWIDTH_16BIT;
-  SPI_InitStruct.ClockPolarity = LL_SPI_POLARITY_LOW;
-  SPI_InitStruct.ClockPhase = LL_SPI_PHASE_2EDGE;
-  SPI_InitStruct.NSS = LL_SPI_NSS_SOFT;
-  SPI_InitStruct.BaudRate = LL_SPI_BAUDRATEPRESCALER_DIV32;
-  SPI_InitStruct.BitOrder = LL_SPI_MSB_FIRST;
-  SPI_InitStruct.CRCCalculation = LL_SPI_CRCCALCULATION_DISABLE;
-  SPI_InitStruct.CRCPoly = 7;
-  LL_SPI_Init(SPI1, &SPI_InitStruct);
-  LL_SPI_SetStandard(SPI1, LL_SPI_PROTOCOL_MOTOROLA);
-  LL_SPI_DisableNSSPulseMgt(SPI1);
+  hspi1.Instance = SPI1;
+  hspi1.Init.Mode = SPI_MODE_MASTER;
+  hspi1.Init.Direction = SPI_DIRECTION_2LINES;
+  hspi1.Init.DataSize = SPI_DATASIZE_16BIT;
+  hspi1.Init.CLKPolarity = SPI_POLARITY_LOW;
+  hspi1.Init.CLKPhase = SPI_PHASE_2EDGE;
+  hspi1.Init.NSS = SPI_NSS_HARD_OUTPUT;
+  hspi1.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_32;
+  hspi1.Init.FirstBit = SPI_FIRSTBIT_MSB;
+  hspi1.Init.TIMode = SPI_TIMODE_DISABLE;
+  hspi1.Init.CRCCalculation = SPI_CRCCALCULATION_DISABLE;
+  hspi1.Init.CRCPolynomial = 7;
+  hspi1.Init.CRCLength = SPI_CRC_LENGTH_DATASIZE;
+  hspi1.Init.NSSPMode = SPI_NSS_PULSE_DISABLE;
+  if (HAL_SPI_Init(&hspi1) != HAL_OK)
+  {
+    Error_Handler();
+  }
   /* USER CODE BEGIN SPI1_Init 2 */
   LL_DMA_DisableChannel(DMA2, LL_DMA_CHANNEL_4);
   LL_DMA_DisableChannel(DMA2, LL_DMA_CHANNEL_5);
@@ -150,21 +86,137 @@ void MX_SPI1_Init(void)
 
 }
 
+void HAL_SPI_MspInit(SPI_HandleTypeDef* spiHandle)
+{
+
+  GPIO_InitTypeDef GPIO_InitStruct = {0};
+  if(spiHandle->Instance==SPI1)
+  {
+  /* USER CODE BEGIN SPI1_MspInit 0 */
+
+  /* USER CODE END SPI1_MspInit 0 */
+    /* SPI1 clock enable */
+    __HAL_RCC_SPI1_CLK_ENABLE();
+
+    __HAL_RCC_GPIOA_CLK_ENABLE();
+    __HAL_RCC_GPIOB_CLK_ENABLE();
+    /**SPI1 GPIO Configuration
+    PA6     ------> SPI1_MISO
+    PA7     ------> SPI1_MOSI
+    PA15     ------> SPI1_NSS
+    PB3     ------> SPI1_SCK
+    */
+    GPIO_InitStruct.Pin = AS5047_MISO_Pin|AS5047_MOSI_Pin;
+    GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
+    GPIO_InitStruct.Pull = GPIO_NOPULL;
+    GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
+    GPIO_InitStruct.Alternate = GPIO_AF5_SPI1;
+    HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+
+    GPIO_InitStruct.Pin = AS5047_NSS_Pin;
+    GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
+    GPIO_InitStruct.Pull = GPIO_NOPULL;
+    GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+    GPIO_InitStruct.Alternate = GPIO_AF5_SPI1;
+    HAL_GPIO_Init(AS5047_NSS_GPIO_Port, &GPIO_InitStruct);
+
+    GPIO_InitStruct.Pin = AS5047_SCK_Pin;
+    GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
+    GPIO_InitStruct.Pull = GPIO_NOPULL;
+    GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
+    GPIO_InitStruct.Alternate = GPIO_AF5_SPI1;
+    HAL_GPIO_Init(AS5047_SCK_GPIO_Port, &GPIO_InitStruct);
+
+    /* SPI1 DMA Init */
+    /* SPI1_RX Init */
+    hdma_spi1_rx.Instance = DMA2_Channel4;
+    hdma_spi1_rx.Init.Request = DMA_REQUEST_SPI1_RX;
+    hdma_spi1_rx.Init.Direction = DMA_PERIPH_TO_MEMORY;
+    hdma_spi1_rx.Init.PeriphInc = DMA_PINC_DISABLE;
+    hdma_spi1_rx.Init.MemInc = DMA_MINC_ENABLE;
+    hdma_spi1_rx.Init.PeriphDataAlignment = DMA_PDATAALIGN_HALFWORD;
+    hdma_spi1_rx.Init.MemDataAlignment = DMA_MDATAALIGN_HALFWORD;
+    hdma_spi1_rx.Init.Mode = DMA_NORMAL;
+    hdma_spi1_rx.Init.Priority = DMA_PRIORITY_HIGH;
+    if (HAL_DMA_Init(&hdma_spi1_rx) != HAL_OK)
+    {
+      Error_Handler();
+    }
+
+    __HAL_LINKDMA(spiHandle,hdmarx,hdma_spi1_rx);
+
+    /* SPI1_TX Init */
+    hdma_spi1_tx.Instance = DMA2_Channel5;
+    hdma_spi1_tx.Init.Request = DMA_REQUEST_SPI1_TX;
+    hdma_spi1_tx.Init.Direction = DMA_MEMORY_TO_PERIPH;
+    hdma_spi1_tx.Init.PeriphInc = DMA_PINC_DISABLE;
+    hdma_spi1_tx.Init.MemInc = DMA_MINC_ENABLE;
+    hdma_spi1_tx.Init.PeriphDataAlignment = DMA_PDATAALIGN_HALFWORD;
+    hdma_spi1_tx.Init.MemDataAlignment = DMA_MDATAALIGN_HALFWORD;
+    hdma_spi1_tx.Init.Mode = DMA_NORMAL;
+    hdma_spi1_tx.Init.Priority = DMA_PRIORITY_HIGH;
+    if (HAL_DMA_Init(&hdma_spi1_tx) != HAL_OK)
+    {
+      Error_Handler();
+    }
+
+    __HAL_LINKDMA(spiHandle,hdmatx,hdma_spi1_tx);
+
+  /* USER CODE BEGIN SPI1_MspInit 1 */
+
+  /* USER CODE END SPI1_MspInit 1 */
+  }
+}
+
+void HAL_SPI_MspDeInit(SPI_HandleTypeDef* spiHandle)
+{
+
+  if(spiHandle->Instance==SPI1)
+  {
+  /* USER CODE BEGIN SPI1_MspDeInit 0 */
+
+  /* USER CODE END SPI1_MspDeInit 0 */
+    /* Peripheral clock disable */
+    __HAL_RCC_SPI1_CLK_DISABLE();
+
+    /**SPI1 GPIO Configuration
+    PA6     ------> SPI1_MISO
+    PA7     ------> SPI1_MOSI
+    PA15     ------> SPI1_NSS
+    PB3     ------> SPI1_SCK
+    */
+    HAL_GPIO_DeInit(GPIOA, AS5047_MISO_Pin|AS5047_MOSI_Pin|AS5047_NSS_Pin);
+
+    HAL_GPIO_DeInit(AS5047_SCK_GPIO_Port, AS5047_SCK_Pin);
+
+    /* SPI1 DMA DeInit */
+    HAL_DMA_DeInit(spiHandle->hdmarx);
+    HAL_DMA_DeInit(spiHandle->hdmatx);
+  /* USER CODE BEGIN SPI1_MspDeInit 1 */
+
+  /* USER CODE END SPI1_MspDeInit 1 */
+  }
+}
+
 /* USER CODE BEGIN 1 */
 void SPI_TransmitReceive_DMA(uint16_t* transferData, uint16_t* receiveData, uint16_t size)
 {
   for (uint16_t i=0; i<size; i++)
   {
-    LL_DMA_DisableChannel(DMA2, LL_DMA_CHANNEL_4);
-    LL_DMA_DisableChannel(DMA2, LL_DMA_CHANNEL_5);
-    LL_SPI_Disable(SPI1);
-    LL_DMA_ConfigAddresses(DMA2, LL_DMA_CHANNEL_4, LL_SPI_DMA_GetRegAddr(SPI1), (uint32_t)(receiveData+i), LL_DMA_GetDataTransferDirection(DMA2, LL_DMA_CHANNEL_4));
-    LL_DMA_ConfigAddresses(DMA2, LL_DMA_CHANNEL_5, (uint32_t)(transferData+i), LL_SPI_DMA_GetRegAddr(SPI1), LL_DMA_GetDataTransferDirection(DMA2, LL_DMA_CHANNEL_5));
-
     HAL_GPIO_WritePin(  AS5047_CS_GPIO_Port,   AS5047_CS_Pin, GPIO_PIN_RESET); spiTxFinished = 0;spiRxFinished = 0;
-    LL_SPI_Enable(SPI1);   
-    LL_DMA_EnableChannel(DMA2, LL_DMA_CHANNEL_4);
-    LL_DMA_EnableChannel(DMA2, LL_DMA_CHANNEL_5);
+    uint8_t res = HAL_SPI_TransmitReceive_DMA(&hspi1, (uint32_t)(transferData+i), (uint32_t)(receiveData+i), 1) ;
+    if(res!= HAL_OK) // after we will use bytesize if we want to optimize
+        res = res;
+
+    // LL_DMA_DisableChannel(DMA2, LL_DMA_CHANNEL_4);
+    // LL_DMA_DisableChannel(DMA2, LL_DMA_CHANNEL_5);
+    // LL_SPI_Disable(SPI1);
+    // LL_DMA_ConfigAddresses(DMA2, LL_DMA_CHANNEL_4, LL_SPI_DMA_GetRegAddr(SPI1), (uint32_t)(receiveData+i), LL_DMA_GetDataTransferDirection(DMA2, LL_DMA_CHANNEL_4));
+    // LL_DMA_ConfigAddresses(DMA2, LL_DMA_CHANNEL_5, (uint32_t)(transferData+i), LL_SPI_DMA_GetRegAddr(SPI1), LL_DMA_GetDataTransferDirection(DMA2, LL_DMA_CHANNEL_5));
+
+    // LL_SPI_Enable(SPI1);   
+    // LL_DMA_EnableChannel(DMA2, LL_DMA_CHANNEL_4);
+    // LL_DMA_EnableChannel(DMA2, LL_DMA_CHANNEL_5);
 
   }
 }
@@ -173,11 +225,16 @@ void SPI_Transfer_DMA(uint16_t* transferData, uint16_t size)
 {
   for (uint16_t i=0; i<size; i++)
   {
-    LL_DMA_DisableChannel(DMA2, LL_DMA_CHANNEL_5);
-    LL_DMA_ConfigAddresses(DMA2, LL_DMA_CHANNEL_5, (uint32_t)(transferData+i), LL_SPI_DMA_GetRegAddr(SPI1), LL_DMA_GetDataTransferDirection(DMA2, LL_DMA_CHANNEL_5));
-
     HAL_GPIO_WritePin(  AS5047_CS_GPIO_Port,   AS5047_CS_Pin, GPIO_PIN_RESET); spiTxFinished = 0;
-    LL_DMA_EnableChannel(DMA2, LL_DMA_CHANNEL_5);
+    uint8_t res = HAL_SPI_Transmit_DMA(&hspi1, (uint32_t)(transferData+i), 1) ;
+    if(res!= HAL_OK) // after we will use bytesize if we want to optimize
+        res = res;
+
+    // LL_DMA_DisableChannel(DMA2, LL_DMA_CHANNEL_5);
+    // LL_DMA_ConfigAddresses(DMA2, LL_DMA_CHANNEL_5, (uint32_t)(transferData+i), LL_SPI_DMA_GetRegAddr(SPI1), LL_DMA_GetDataTransferDirection(DMA2, LL_DMA_CHANNEL_5));
+
+    // HAL_GPIO_WritePin(  AS5047_CS_GPIO_Port,   AS5047_CS_Pin, GPIO_PIN_RESET); spiTxFinished = 0;
+    // LL_DMA_EnableChannel(DMA2, LL_DMA_CHANNEL_5);
   }
 }
 
@@ -185,18 +242,22 @@ void SPI_Receive_DMA(uint16_t* receiveData, uint16_t size)
 {
   for (uint16_t i=0; i<size; i++)
   {
-    LL_DMA_DisableChannel(DMA2, LL_DMA_CHANNEL_4);
-    LL_DMA_ConfigAddresses(DMA2, LL_DMA_CHANNEL_4, LL_SPI_DMA_GetRegAddr(SPI1), (uint32_t)(receiveData+i), LL_DMA_GetDataTransferDirection(DMA2, LL_DMA_CHANNEL_4));
-
     HAL_GPIO_WritePin(  AS5047_CS_GPIO_Port,   AS5047_CS_Pin, GPIO_PIN_RESET); spiRxFinished = 0;
-    LL_DMA_EnableChannel(DMA2, LL_DMA_CHANNEL_4);
+    uint8_t res = HAL_SPI_Receive_DMA(&hspi1, (uint32_t)(receiveData+i), 1) ;
+    if(res!= HAL_OK) // after we will use bytesize if we want to optimize
+        res = res;
+    // LL_DMA_DisableChannel(DMA2, LL_DMA_CHANNEL_4);
+    // LL_DMA_ConfigAddresses(DMA2, LL_DMA_CHANNEL_4, LL_SPI_DMA_GetRegAddr(SPI1), (uint32_t)(receiveData+i), LL_DMA_GetDataTransferDirection(DMA2, LL_DMA_CHANNEL_4));
+
+    // HAL_GPIO_WritePin(  AS5047_CS_GPIO_Port,   AS5047_CS_Pin, GPIO_PIN_RESET); spiRxFinished = 0;
+    // LL_DMA_EnableChannel(DMA2, LL_DMA_CHANNEL_4);
   }
 }
 
 void DMA2_ReceiveComplete(void)
 {
     // TX Done .. Do Something ...
-  LL_DMA_ClearFlag_TC4(DMA2);
+  // LL_DMA_ClearFlag_TC4(DMA2);
   if (spiTxFinished)
     HAL_GPIO_WritePin(  AS5047_CS_GPIO_Port,   AS5047_CS_Pin, GPIO_PIN_SET);
   spiRxFinished = 1;
@@ -205,7 +266,7 @@ void DMA2_ReceiveComplete(void)
 void DMA2_TransmitComplete(void)
 {
     // RX Done .. Do Something ...
-  LL_DMA_ClearFlag_TC5(DMA2);
+  // LL_DMA_ClearFlag_TC5(DMA2);
   if (spiRxFinished)
     HAL_GPIO_WritePin(  AS5047_CS_GPIO_Port,   AS5047_CS_Pin, GPIO_PIN_SET);
   spiTxFinished = 1;

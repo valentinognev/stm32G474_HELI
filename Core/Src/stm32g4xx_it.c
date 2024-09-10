@@ -56,6 +56,8 @@
 
 /* External variables --------------------------------------------------------*/
 extern PCD_HandleTypeDef hpcd_USB_FS;
+extern DMA_HandleTypeDef hdma_spi1_rx;
+extern DMA_HandleTypeDef hdma_spi1_tx;
 /* USER CODE BEGIN EV */
 
 /* USER CODE END EV */
@@ -263,7 +265,7 @@ void DMA2_Channel4_IRQHandler(void)
       LL_DMA_ClearFlag_TE4(DMA2);      // SPI Receive error
     }
   /* USER CODE END DMA2_Channel4_IRQn 0 */
-
+  HAL_DMA_IRQHandler(&hdma_spi1_rx);
   /* USER CODE BEGIN DMA2_Channel4_IRQn 1 */
 
   /* USER CODE END DMA2_Channel4_IRQn 1 */
@@ -284,7 +286,7 @@ void DMA2_Channel5_IRQHandler(void)
       LL_DMA_ClearFlag_TE5(DMA2);        // SPI Transmit error
     }
   /* USER CODE END DMA2_Channel5_IRQn 0 */
-
+  HAL_DMA_IRQHandler(&hdma_spi1_tx);
   /* USER CODE BEGIN DMA2_Channel5_IRQn 1 */
 
   /* USER CODE END DMA2_Channel5_IRQn 1 */
