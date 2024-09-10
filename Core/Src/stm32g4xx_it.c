@@ -315,8 +315,18 @@ void DMA1_Channel7_IRQHandler(void)
   */
 void ADC1_2_IRQHandler(void)
 {
-  /* USER CODE BEGIN ADC1_2_IRQn 0 */
- /* Check whether ADC group regular overrun caused the ADC interruption */
+  /* Check whether ADC group regular end of sequence conversions caused       */
+  /* the ADC interruption.                                                    */
+  if(LL_ADC_IsActiveFlag_EOS(ADC1) != 0)
+  {
+    /* Clear flag ADC group regular end of sequence conversions */
+    LL_ADC_ClearFlag_EOS(ADC1);
+    
+    /* Call interruption treatment function */
+    AdcGrpRegularSequenceConvComplete_Callback();
+  }
+  
+  /* Check whether ADC group regular overrun caused the ADC interruption */
   if(LL_ADC_IsActiveFlag_OVR(ADC1) != 0)
   {
     /* Clear flag ADC group regular overrun */
@@ -324,20 +334,6 @@ void ADC1_2_IRQHandler(void)
     
     /* Call interruption treatment function */
     AdcGrpRegularOverrunError_Callback();
-  }
-  /* Check whether ADC group regular end of sequence conversions caused       */
-  /* the ADC interruption.                                                    */
-  /* Note: On this STM32 series, ADC group regular end of conversion           */
-  /*       must be selected among end of unitary conversion                   */
-  /*       or end of sequence conversions.                                    */
-  /*       Refer to function "LL_ADC_REG_SetFlagEndOfConversion()".           */
-  else /* if(LL_ADC_IsActiveFlag_EOCS(ADC1) != 0) */
-  {
-    /* Clear flag ADC group regular end of sequence conversions */
-    LL_ADC_ClearFlag_EOC(ADC1);
-    
-    /* Call interruption treatment function */
-    AdcGrpRegularSequenceConvComplete_Callback();
   }
   /* USER CODE END ADC1_2_IRQn 0 */
 
@@ -398,7 +394,7 @@ void DMA2_Channel3_IRQHandler(void)
   if(LL_DMA_IsActiveFlag_TC3(DMA2) == 1)
   {
     /*  Clear Stream  transfer complete flag*/
-    LL_DMA_ClearFlag_TC3(DMA2);
+    LL_DMA_ClearFlag_GI3(DMA2);
     /* Call interruption treatment function */
     AdcDmaTransferComplete_Callback();
   }

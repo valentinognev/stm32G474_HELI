@@ -30,6 +30,13 @@
   #define ADC_STOP_CONVERSION_TIMEOUT_MS   ((uint32_t)   1)
   #define ADC_CONVERSION_TIMEOUT_MS        ((uint32_t)   2)
 
+  /* Delay between ADC end of calibration and ADC enable.                     */
+  /* Delay estimation in CPU cycles: Case of ADC enable done                  */
+  /* immediately after ADC calibration, ADC clock setting slow                */
+  /* (LL_ADC_CLOCK_ASYNC_DIV32). Use a higher delay if ratio                  */
+  /* (CPU clock / ADC clock) is above 32.                                     */
+  #define ADC_DELAY_CALIB_ENABLE_CPU_CYCLES  (LL_ADC_DELAY_CALIB_ENABLE_ADC_CYCLES * 32)
+
 /* Definitions of environment analog values */
   /* Value of analog reference voltage (Vref+), connected to analog voltage   */
   /* supply Vdda (unit: mV).                                                  */
@@ -39,7 +46,7 @@
   /* Definition of ADCx conversions data table size */
   /* Size of array set to ADC sequencer number of ranks converted,            */
   /* to have a rank in each array address.                                    */
-  #define ADC_CONVERTED_DATA_BUFFER_SIZE   ((uint32_t)   5)
+  #define ADC_CONVERTED_DATA_BUFFER_SIZE   ((uint32_t)   3)
 /* Private macro -------------------------------------------------------------*/
 /* Private variables ---------------------------------------------------------*/
 
@@ -155,7 +162,7 @@ void MX_ADC1_Init(void)
   ADC_REG_InitStruct.SequencerDiscont = LL_ADC_REG_SEQ_DISCONT_DISABLE;
   ADC_REG_InitStruct.ContinuousMode = LL_ADC_REG_CONV_SINGLE;
   ADC_REG_InitStruct.DMATransfer = LL_ADC_REG_DMA_TRANSFER_UNLIMITED;
-  ADC_REG_InitStruct.Overrun = LL_ADC_REG_OVR_DATA_PRESERVED;
+  ADC_REG_InitStruct.Overrun = LL_ADC_REG_OVR_DATA_OVERWRITTEN;
   LL_ADC_REG_Init(ADC1, &ADC_REG_InitStruct);
   LL_ADC_SetGainCompensation(ADC1, 0);
   LL_ADC_SetOverSamplingScope(ADC1, LL_ADC_OVS_DISABLE);
@@ -216,15 +223,10 @@ void MX_ADC1_Init(void)
   LL_DMA_EnableIT_TE(DMA2, LL_DMA_CHANNEL_3);
   
 
-    /*## Configuration of ADC interruptions ####################################*/
-  /* Enable interruption ADC group regular end of unitary conversion          */
-  /* or end of sequence conversions.                                          */
-  /* Note: On this STM32 series, ADC group regular end of conversion           */
-  /*       must be selected among end of unitary conversion                   */
-  /*       or end of sequence conversions.                                    */
-  /*       Refer to function "LL_ADC_REG_SetFlagEndOfConversion()".           */
-  LL_ADC_EnableIT_EOC(ADC1);
-  
+  /*## Configuration of ADC interruptions ####################################*/
+  /* Enable interruption ADC group regular end of sequence conversions */
+  LL_ADC_EnableIT_EOS(ADC1);
+
   /* Enable interruption ADC group regular overrun */
   LL_ADC_EnableIT_OVR(ADC1);
   
@@ -260,6 +262,7 @@ void MX_ADC1_Init(void)
   */
 void Activate_ADC(void)
 {
+  __IO uint32_t wait_loop_index = 0;
   #if (USE_TIMEOUT == 1)
   uint32_t Timeout = 0; /* Variable used for timeout management */
   #endif /* USE_TIMEOUT */
@@ -268,25 +271,96 @@ void Activate_ADC(void)
   
   /* Note: Hardware constraint (refer to description of the functions         */
   /*       below):                                                            */
-  /*       On this STM32 series, setting of these features are not             */
-  /*       conditioned to ADC state.                                          */
-  /*       However, in order to be compliant with other STM32 series          */
-  /*       and to show the best practice usages, ADC state is checked.        */
+  /*       On this STM32 series, setting of these features is conditioned to   */
+  /*       ADC state:                                                         */
+  /*       ADC must be disabled.                                              */
+  /* Note: In this example, all these checks are not necessary but are        */
+  /*       implemented anyway to show the best practice usages                */
+  /*       corresponding to reference manual procedure.                       */
   /*       Software can be optimized by removing some of these checks, if     */
   /*       they are not relevant considering previous settings and actions    */
   /*       in user application.                                               */
-  if (LL_DMA_IsEnabledChannel(DMA2, LL_DMA_CHANNEL_3) == 0)
-  {
-    /* Enable the DMA transfer */
-    LL_DMA_EnableChannel(DMA2, LL_DMA_CHANNEL_3);
-  }
-
   if (LL_ADC_IsEnabled(ADC1) == 0)
   {
+    /* Disable ADC deep power down (enabled by default after reset state) */
+    LL_ADC_DisableDeepPowerDown(ADC1);
+    
+    /* Enable ADC internal voltage regulator */
+    LL_ADC_EnableInternalRegulator(ADC1);
+    
+    /* Delay for ADC internal voltage regulator stabilization.                */
+    /* Compute number of CPU cycles to wait for, from delay in us.            */
+    /* Note: Variable divided by 2 to compensate partially                    */
+    /*       CPU processing cycles (depends on compilation optimization).     */
+    /* Note: If system core clock frequency is below 200kHz, wait time        */
+    /*       is only a few CPU processing cycles.                             */
+    wait_loop_index = ((LL_ADC_DELAY_INTERNAL_REGUL_STAB_US * (SystemCoreClock / (100000 * 2))) / 10);
+    while(wait_loop_index != 0)
+    {
+      wait_loop_index--;
+    }
+    
+    /* Run ADC self calibration */
+    LL_ADC_StartCalibration(ADC1, LL_ADC_SINGLE_ENDED);
+    
+    /* Poll for ADC effectively calibrated */
+    #if (USE_TIMEOUT == 1)
+    Timeout = ADC_CALIBRATION_TIMEOUT_MS;
+    #endif /* USE_TIMEOUT */
+    
+    while (LL_ADC_IsCalibrationOnGoing(ADC1) != 0)
+    {
+    #if (USE_TIMEOUT == 1)
+      /* Check Systick counter flag to decrement the time-out value */
+      if (LL_SYSTICK_IsActiveCounterFlag())
+      {
+        if(Timeout-- == 0)
+        {
+        /* Time-out occurred. Set LED to blinking mode */
+        LED_Blinking(LED_BLINK_ERROR);
+        }
+      }
+    #endif /* USE_TIMEOUT */
+    }
+    
+    /* Delay between ADC end of calibration and ADC enable.                   */
+    /* Note: Variable divided by 2 to compensate partially                    */
+    /*       CPU processing cycles (depends on compilation optimization).     */
+    wait_loop_index = (ADC_DELAY_CALIB_ENABLE_CPU_CYCLES >> 1);
+    while(wait_loop_index != 0)
+    {
+      wait_loop_index--;
+    }
+    
     /* Enable ADC */
     LL_ADC_Enable(ADC1);
     
+    /* Poll for ADC ready to convert */
+    #if (USE_TIMEOUT == 1)
+    Timeout = ADC_ENABLE_TIMEOUT_MS;
+    #endif /* USE_TIMEOUT */
+    
+    while (LL_ADC_IsActiveFlag_ADRDY(ADC1) == 0)
+    {
+    #if (USE_TIMEOUT == 1)
+      /* Check Systick counter flag to decrement the time-out value */
+      if (LL_SYSTICK_IsActiveCounterFlag())
+      {
+        if(Timeout-- == 0)
+        {
+        /* Time-out occurred. Set LED to blinking mode */
+        LED_Blinking(LED_BLINK_ERROR);
+        }
+      }
+    #endif /* USE_TIMEOUT */
+    }
+    
+    /* Note: ADC flag ADRDY is not cleared here to be able to check ADC       */
+    /*       status afterwards.                                               */
+    /*       This flag should be cleared at ADC Deactivation, before a new    */
+    /*       ADC activation, using function "LL_ADC_ClearFlag_ADRDY()".       */
   }
+  
   /*## Operation on ADC hierarchical scope: ADC group regular ################*/
   /* Note: No operation on ADC group regular performed here.                  */
   /*       ADC group regular conversions to be performed after this function  */
