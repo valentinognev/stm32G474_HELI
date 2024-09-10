@@ -71,14 +71,16 @@ void Error_Handler(void);
 /* USER CODE END EFP */
 
 /* Private defines -----------------------------------------------------------*/
-#define PHASE_Pin GPIO_PIN_0
-#define PHASE_GPIO_Port GPIOA
 #define AVGSPEEED_Pin GPIO_PIN_1
 #define AVGSPEEED_GPIO_Port GPIOA
 #define AMPSPEED_Pin GPIO_PIN_2
 #define AMPSPEED_GPIO_Port GPIOA
+#define PHASE_Pin GPIO_PIN_3
+#define PHASE_GPIO_Port GPIOA
 #define AS5047_CS_Pin GPIO_PIN_4
 #define AS5047_CS_GPIO_Port GPIOA
+#define SERVO_ROLL_Pin GPIO_PIN_5
+#define SERVO_ROLL_GPIO_Port GPIOA
 #define AS5047_MISO_Pin GPIO_PIN_6
 #define AS5047_MISO_GPIO_Port GPIOA
 #define AS5047_MOSI_Pin GPIO_PIN_7

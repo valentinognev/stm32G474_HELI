@@ -95,15 +95,10 @@ void MX_ADC1_Init(void)
 
   LL_AHB2_GRP1_EnableClock(LL_AHB2_GRP1_PERIPH_GPIOA);
   /**ADC1 GPIO Configuration
-  PA0   ------> ADC1_IN1
   PA1   ------> ADC1_IN2
   PA2   ------> ADC1_IN3
+  PA3   ------> ADC1_IN4
   */
-  GPIO_InitStruct.Pin = LL_GPIO_PIN_0;
-  GPIO_InitStruct.Mode = LL_GPIO_MODE_ANALOG;
-  GPIO_InitStruct.Pull = LL_GPIO_PULL_NO;
-  LL_GPIO_Init(GPIOA, &GPIO_InitStruct);
-
   GPIO_InitStruct.Pin = LL_GPIO_PIN_1;
   GPIO_InitStruct.Mode = LL_GPIO_MODE_ANALOG;
   GPIO_InitStruct.Pull = LL_GPIO_PULL_NO;
@@ -113,6 +108,30 @@ void MX_ADC1_Init(void)
   GPIO_InitStruct.Mode = LL_GPIO_MODE_ANALOG;
   GPIO_InitStruct.Pull = LL_GPIO_PULL_NO;
   LL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+
+  GPIO_InitStruct.Pin = LL_GPIO_PIN_3;
+  GPIO_InitStruct.Mode = LL_GPIO_MODE_ANALOG;
+  GPIO_InitStruct.Pull = LL_GPIO_PULL_NO;
+  LL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+
+  /* ADC1 DMA Init */
+
+  /* ADC1 Init */
+  LL_DMA_SetPeriphRequest(DMA2, LL_DMA_CHANNEL_3, LL_DMAMUX_REQ_ADC1);
+
+  LL_DMA_SetDataTransferDirection(DMA2, LL_DMA_CHANNEL_3, LL_DMA_DIRECTION_PERIPH_TO_MEMORY);
+
+  LL_DMA_SetChannelPriorityLevel(DMA2, LL_DMA_CHANNEL_3, LL_DMA_PRIORITY_LOW);
+
+  LL_DMA_SetMode(DMA2, LL_DMA_CHANNEL_3, LL_DMA_MODE_NORMAL);
+
+  LL_DMA_SetPeriphIncMode(DMA2, LL_DMA_CHANNEL_3, LL_DMA_PERIPH_NOINCREMENT);
+
+  LL_DMA_SetMemoryIncMode(DMA2, LL_DMA_CHANNEL_3, LL_DMA_MEMORY_INCREMENT);
+
+  LL_DMA_SetPeriphSize(DMA2, LL_DMA_CHANNEL_3, LL_DMA_PDATAALIGN_HALFWORD);
+
+  LL_DMA_SetMemorySize(DMA2, LL_DMA_CHANNEL_3, LL_DMA_MDATAALIGN_HALFWORD);
 
   /* ADC1 interrupt Init */
   NVIC_SetPriority(ADC1_2_IRQn, NVIC_EncodePriority(NVIC_GetPriorityGrouping(),0, 0));
@@ -135,7 +154,7 @@ void MX_ADC1_Init(void)
   ADC_REG_InitStruct.SequencerLength = LL_ADC_REG_SEQ_SCAN_ENABLE_3RANKS;
   ADC_REG_InitStruct.SequencerDiscont = LL_ADC_REG_SEQ_DISCONT_DISABLE;
   ADC_REG_InitStruct.ContinuousMode = LL_ADC_REG_CONV_SINGLE;
-  ADC_REG_InitStruct.DMATransfer = LL_ADC_REG_DMA_TRANSFER_NONE;
+  ADC_REG_InitStruct.DMATransfer = LL_ADC_REG_DMA_TRANSFER_UNLIMITED;
   ADC_REG_InitStruct.Overrun = LL_ADC_REG_OVR_DATA_PRESERVED;
   LL_ADC_REG_Init(ADC1, &ADC_REG_InitStruct);
   LL_ADC_SetGainCompensation(ADC1, 0);
@@ -163,9 +182,9 @@ void MX_ADC1_Init(void)
 
   /** Configure Regular Channel
   */
-  LL_ADC_REG_SetSequencerRanks(ADC1, LL_ADC_REG_RANK_1, LL_ADC_CHANNEL_1);
-  LL_ADC_SetChannelSamplingTime(ADC1, LL_ADC_CHANNEL_1, LL_ADC_SAMPLINGTIME_2CYCLES_5);
-  LL_ADC_SetChannelSingleDiff(ADC1, LL_ADC_CHANNEL_1, LL_ADC_SINGLE_ENDED);
+  LL_ADC_REG_SetSequencerRanks(ADC1, LL_ADC_REG_RANK_1, LL_ADC_CHANNEL_4);
+  LL_ADC_SetChannelSamplingTime(ADC1, LL_ADC_CHANNEL_4, LL_ADC_SAMPLINGTIME_2CYCLES_5);
+  LL_ADC_SetChannelSingleDiff(ADC1, LL_ADC_CHANNEL_4, LL_ADC_SINGLE_ENDED);
 
   /** Configure Regular Channel
   */
@@ -182,19 +201,19 @@ void MX_ADC1_Init(void)
   
 /* Set DMA transfer addresses of source and destination */
   LL_DMA_ConfigAddresses(DMA2,
-                        LL_DMA_CHANNEL_6,
+                        LL_DMA_CHANNEL_3,
                          LL_ADC_DMA_GetRegAddr(ADC1, LL_ADC_DMA_REG_REGULAR_DATA),
                          (uint32_t)&aADCxConvertedData,
                          LL_DMA_DIRECTION_PERIPH_TO_MEMORY);
   
   /* Set DMA transfer size */
-  LL_DMA_SetDataLength(DMA2, LL_DMA_CHANNEL_6, ADC_CONVERTED_DATA_BUFFER_SIZE);
+  LL_DMA_SetDataLength(DMA2, LL_DMA_CHANNEL_3, ADC_CONVERTED_DATA_BUFFER_SIZE);
   
   /* Enable DMA transfer interruption: transfer complete */
-  LL_DMA_EnableIT_TC(DMA2, LL_DMA_CHANNEL_6);
+  LL_DMA_EnableIT_TC(DMA2, LL_DMA_CHANNEL_3);
 
   /* Enable DMA transfer interruption: transfer error */
-  LL_DMA_EnableIT_TE(DMA2, LL_DMA_CHANNEL_6);
+  LL_DMA_EnableIT_TE(DMA2, LL_DMA_CHANNEL_3);
   
 
     /*## Configuration of ADC interruptions ####################################*/
@@ -217,7 +236,7 @@ void MX_ADC1_Init(void)
 
   /*## Activation of DMA #####################################################*/
   /* Enable the DMA transfer */
-    LL_DMA_EnableChannel(DMA2,LL_DMA_CHANNEL_6);
+  LL_DMA_EnableChannel(DMA2,LL_DMA_CHANNEL_3);
 
   /* USER CODE END ADC1_Init 2 */
 
@@ -256,13 +275,18 @@ void Activate_ADC(void)
   /*       Software can be optimized by removing some of these checks, if     */
   /*       they are not relevant considering previous settings and actions    */
   /*       in user application.                                               */
+  if (LL_DMA_IsEnabledChannel(DMA2, LL_DMA_CHANNEL_3) == 0)
+  {
+    /* Enable the DMA transfer */
+    LL_DMA_EnableChannel(DMA2, LL_DMA_CHANNEL_3);
+  }
+
   if (LL_ADC_IsEnabled(ADC1) == 0)
   {
     /* Enable ADC */
     LL_ADC_Enable(ADC1);
     
   }
-  
   /*## Operation on ADC hierarchical scope: ADC group regular ################*/
   /* Note: No operation on ADC group regular performed here.                  */
   /*       ADC group regular conversions to be performed after this function  */
