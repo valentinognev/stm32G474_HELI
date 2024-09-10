@@ -1,0 +1,30 @@
+{
+    "configurations": [
+        {
+            "name": "STM32",
+            "includePath": [
+                "Core/Inc/**",
+                "Drivers/CMSIS/Device/ST/STM32G4xx/Include/**",
+                "Drivers/CMSIS/Include/**",
+                "Drivers/STM32G4xx_HAL_Driver/Inc/**",
+                "Drivers/STM32G4xx_HAL_Driver/Inc/Legacy/**",
+                "${workspaceFolder}/USB_Device/App/**",
+                "${workspaceFolder}/Project/Inc/**",
+                "${workspaceFolder}/Middlewares/ST/STM32_USB_Device_Library/Core/Inc/**",
+                "${workspaceFolder}/USB_Device/Target/**",
+                "${workspaceFolder}/Middlewares/ST/STM32_USB_Device_Library/Class/CDC/Inc/**",
+                "/usr/include/linux/**",
+                "/usr/include/**"
+            ],
+            "defines": [
+                "STM32G474xe",
+                "USE_FULL_LL_DRIVER",
+                "USE_HAL_DRIVER"
+            ],
+            "compilerPath": "/opt/gcc-arm-none-eabi/bin/arm-none-eabi-g++",
+            "configurationProvider": "ms-vscode.makefile-tools",
+            "intelliSenseMode": "gcc-arm"
+        }
+    ],
+    "version": 4
+}
