@@ -250,9 +250,10 @@ int main(void)
   float motorMainCommand = 0, motorTailCommand = 0;
   
   DebugScopeStartWrite(&debugData);
+  HAL_ADC_Start_DMA(&hadc1, aADCxConvertedData, ADC_CONVERTED_DATA_BUFFER_SIZE);
+  HAL_TIM_Base_Start(&htim6);
   while (1)
   {
-    HAL_ADC_Start_DMA(&hadc1, aADCxConvertedData, ADC_CONVERTED_DATA_BUFFER_SIZE);
 
     HAL_StatusTypeDef status1 = HAL_TIM_IC_Start_DMA(&htim2, TIM_CHANNEL_1, riseDataSERVO_PITCH, PWMNUMVAL);
     HAL_StatusTypeDef status2 = HAL_TIM_IC_Start_DMA(&htim2, TIM_CHANNEL_2, fallDataSERVO_PITCH, PWMNUMVAL);

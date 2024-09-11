@@ -42,6 +42,8 @@ extern TIM_HandleTypeDef htim4;
 
 extern TIM_HandleTypeDef htim5;
 
+extern TIM_HandleTypeDef htim6;
+
 extern TIM_HandleTypeDef htim17;
 
 /* USER CODE BEGIN Private defines */

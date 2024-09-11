@@ -29,6 +29,8 @@ extern "C" {
 /* Includes ------------------------------------------------------------------*/
 #include "stm32g4xx_hal.h"
 
+/* Private includes ----------------------------------------------------------*/
+/* USER CODE BEGIN Includes */
 #include "stm32g4xx_ll_tim.h"
 #include "stm32g4xx_ll_bus.h"
 #include "stm32g4xx_ll_cortex.h"
@@ -40,12 +42,9 @@ extern "C" {
 #include "stm32g4xx_ll_dma.h"
 
 #include "stm32g4xx_ll_exti.h"
-
-/* Private includes ----------------------------------------------------------*/
-/* USER CODE BEGIN Includes */
-#include "stm32g474xx.h"
 #include "stm32g4xx_ll_spi.h"
 #include "stm32g4xx_ll_adc.h"
+#include "stm32g4xx_ll_tim.h"
 /* USER CODE END Includes */
 
 /* Exported types ------------------------------------------------------------*/
