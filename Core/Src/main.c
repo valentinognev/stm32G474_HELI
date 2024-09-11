@@ -252,19 +252,19 @@ int main(void)
   DebugScopeStartWrite(&debugData);
   HAL_ADC_Start_DMA(&hadc1, aADCxConvertedData, ADC_CONVERTED_DATA_BUFFER_SIZE);
   HAL_TIM_Base_Start(&htim6);
+  /*## Start PWM signal generation in DMA mode ############################*/ 
   while (1)
   {
-
-    HAL_StatusTypeDef status1 = HAL_TIM_IC_Start_DMA(&htim2, TIM_CHANNEL_1, riseDataSERVO_PITCH, PWMNUMVAL);
-    HAL_StatusTypeDef status2 = HAL_TIM_IC_Start_DMA(&htim2, TIM_CHANNEL_2, fallDataSERVO_PITCH, PWMNUMVAL);
-    HAL_StatusTypeDef status3 = HAL_TIM_IC_Start_DMA(&htim2, TIM_CHANNEL_3, riseDataSERVO_ROLL, PWMNUMVAL);
-    HAL_StatusTypeDef status4 = HAL_TIM_IC_Start_DMA(&htim2, TIM_CHANNEL_4, fallDataSERVO_ROLL, PWMNUMVAL);
-    HAL_StatusTypeDef status5 = HAL_TIM_IC_Start_DMA(&htim3, TIM_CHANNEL_1, riseDataSERVO_3RD, PWMNUMVAL);
-    HAL_StatusTypeDef status6 = HAL_TIM_IC_Start_DMA(&htim3, TIM_CHANNEL_2, fallDataSERVO_3RD, PWMNUMVAL);
-    HAL_StatusTypeDef status7 = HAL_TIM_IC_Start_DMA(&htim4, TIM_CHANNEL_1, riseDataMOTOR_MAIN, PWMNUMVAL);
-    HAL_StatusTypeDef status8 = HAL_TIM_IC_Start_DMA(&htim4, TIM_CHANNEL_2, fallDataMOTOR_MAIN, PWMNUMVAL);
-    HAL_StatusTypeDef status9 = HAL_TIM_IC_Start_DMA(&htim4, TIM_CHANNEL_3, riseDataMOTOR_TAIL, PWMNUMVAL);
-    HAL_StatusTypeDef status10 = HAL_TIM_IC_Start_DMA(&htim4, TIM_CHANNEL_4, fallDataMOTOR_TAIL, PWMNUMVAL);
+    // HAL_StatusTypeDef status1 = HAL_TIM_IC_Start_DMA(&htim2, TIM_CHANNEL_1, riseDataSERVO_PITCH, PWMNUMVAL);
+    // HAL_StatusTypeDef status2 = HAL_TIM_IC_Start_DMA(&htim2, TIM_CHANNEL_2, fallDataSERVO_PITCH, PWMNUMVAL);
+    // HAL_StatusTypeDef status3 = HAL_TIM_IC_Start_DMA(&htim2, TIM_CHANNEL_3, riseDataSERVO_ROLL, PWMNUMVAL);
+    // HAL_StatusTypeDef status4 = HAL_TIM_IC_Start_DMA(&htim2, TIM_CHANNEL_4, fallDataSERVO_ROLL, PWMNUMVAL);
+    // HAL_StatusTypeDef status5 = HAL_TIM_IC_Start_DMA(&htim3, TIM_CHANNEL_1, riseDataSERVO_3RD, PWMNUMVAL);
+    // HAL_StatusTypeDef status6 = HAL_TIM_IC_Start_DMA(&htim3, TIM_CHANNEL_2, fallDataSERVO_3RD, PWMNUMVAL);
+    // HAL_StatusTypeDef status7 = HAL_TIM_IC_Start_DMA(&htim4, TIM_CHANNEL_1, riseDataMOTOR_MAIN, PWMNUMVAL);
+    // HAL_StatusTypeDef status8 = HAL_TIM_IC_Start_DMA(&htim4, TIM_CHANNEL_2, fallDataMOTOR_MAIN, PWMNUMVAL);
+    // HAL_StatusTypeDef status9 = HAL_TIM_IC_Start_DMA(&htim4, TIM_CHANNEL_3, riseDataMOTOR_TAIL, PWMNUMVAL);
+    // HAL_StatusTypeDef status10 = HAL_TIM_IC_Start_DMA(&htim4, TIM_CHANNEL_4, fallDataMOTOR_TAIL, PWMNUMVAL);
 
     if (isMeasuredSERVO_PITCH == 1)
     {

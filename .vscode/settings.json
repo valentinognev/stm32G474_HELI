@@ -32,7 +32,10 @@
         "stm32g4xx_ll_adc.h": "c",
         "spi.h": "c",
         "stm32g4xx_ll_dma.h": "c",
-        "stm32g4xx_ll_gpio.h": "c"
+        "stm32g4xx_ll_gpio.h": "c",
+        "stm32g4xx_ll_exti.h": "c",
+        "stm32g474xx.h": "c",
+        "dshot.h": "c"
     },
     "cortex-debug.variableUseNaturalFormat": true
 }

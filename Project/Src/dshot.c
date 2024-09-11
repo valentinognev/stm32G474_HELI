@@ -10,7 +10,7 @@
 
 #include "dshot.h"
 
-extern TIM_HandleTypeDef htim1;
+extern TIM_HandleTypeDef MOTOR1_TIM;
 
 /* Variables */
 static uint32_t motor1_dmabuffer[DSHOT_DMA_BUFFER_SIZE];
@@ -77,8 +77,8 @@ static void dshot_set_timer(dshot_type_e dshot_type)
   dshot_prescaler = lrintf((float) timer_clock / dshot_choose_type(dshot_type) + 0.01f) - 1;
 
   // motor1
-  __HAL_TIM_SET_PRESCALER(MOTOR_1_TIM, dshot_prescaler);
-  __HAL_TIM_SET_AUTORELOAD(MOTOR_1_TIM, MOTOR_BITLENGTH);
+  __HAL_TIM_SET_PRESCALER(&MOTOR1_TIM, dshot_prescaler);
+  __HAL_TIM_SET_AUTORELOAD(&MOTOR1_TIM, MOTOR_BITLENGTH);
 
 //   // motor2
 //   __HAL_TIM_SET_PRESCALER(MOTOR_2_TIM, dshot_prescaler);
@@ -120,7 +120,7 @@ static void dshot_dma_tc_callback(DMA_HandleTypeDef *hdma)
 static void dshot_put_tc_callback_function()
 {
   // TIM_DMA_ID_CCx depends on timer channel
-  MOTOR_1_TIM->hdma[TIM_DMA_ID_CC1]->XferCpltCallback = dshot_dma_tc_callback;
+  (&MOTOR1_TIM)->hdma[TIM_DMA_ID_CC1]->XferCpltCallback = dshot_dma_tc_callback;
 //   MOTOR_2_TIM->hdma[MOTOR_2_TIM_CC]->XferCpltCallback = dshot_dma_tc_callback;
 //   MOTOR_3_TIM->hdma[MOTOR_3_TIM_CC]->XferCpltCallback = dshot_dma_tc_callback;
 //   MOTOR_4_TIM->hdma[MOTOR_4_TIM_CC]->XferCpltCallback = dshot_dma_tc_callback;
@@ -130,7 +130,7 @@ static void dshot_start_pwm()
 {
   // Start the timer channel now.
     // Enabling/disabling DMA request can restart a new cycle without PWM start/stop.
-  HAL_TIM_PWM_Start(MOTOR_1_TIM, MOTOR_1_TIM_CHANNEL);
+  HAL_TIM_PWM_Start(&MOTOR1_TIM, MOTOR_1_TIM_CHANNEL);
 //   HAL_TIM_PWM_Start(MOTOR_2_TIM, MOTOR_2_TIM_CHANNEL);
 //   HAL_TIM_PWM_Start(MOTOR_3_TIM, MOTOR_3_TIM_CHANNEL);
 //   HAL_TIM_PWM_Start(MOTOR_4_TIM, MOTOR_4_TIM_CHANNEL);
@@ -185,7 +185,11 @@ static void dshot_prepare_dmabuffer_all(uint16_t* motor_value)
 
 static void dshot_dma_start()
 {
-  HAL_DMA_Start_IT(MOTOR_1_TIM->hdma[TIM_DMA_ID_CC1], (uint32_t)motor1_dmabuffer, (uint32_t)&MOTOR_1_TIM->Instance->CCR1, DSHOT_DMA_BUFFER_SIZE);
+    /*## Start DMA Burst transfer ###########################################*/ 
+    // HAL_TIM_DMABurst_WriteStart(&MOTOR1_TIM, TIM_DMABASE_ARR, TIM_DMA_UPDATE,
+    //                           (uint32_t*)motor1_dmabuffer, TIM_DMABURSTLENGTH_18TRANSFERS);
+
+   HAL_DMA_Start_IT((&MOTOR1_TIM)->hdma[TIM_DMA_ID_CC1], (uint32_t)motor1_dmabuffer, (uint32_t)((&MOTOR1_TIM)->Instance->CCR1), DSHOT_DMA_BUFFER_SIZE);
 //   HAL_DMA_Start_IT(MOTOR_2_TIM->hdma[MOTOR_2_TIM_CC], (uint32_t)motor2_dmabuffer, (uint32_t)&MOTOR_2_TIM->Instance->CCR3, DSHOT_DMA_BUFFER_SIZE);
 //   HAL_DMA_Start_IT(MOTOR_3_TIM->hdma[MOTOR_3_TIM_CC], (uint32_t)motor3_dmabuffer, (uint32_t)&MOTOR_3_TIM->Instance->CCR1, DSHOT_DMA_BUFFER_SIZE);
 //   HAL_DMA_Start_IT(MOTOR_4_TIM->hdma[MOTOR_4_TIM_CC], (uint32_t)motor4_dmabuffer, (uint32_t)&MOTOR_4_TIM->Instance->CCR2, DSHOT_DMA_BUFFER_SIZE);
@@ -193,7 +197,7 @@ static void dshot_dma_start()
 
 static void dshot_enable_dma_request()
 {
-  __HAL_TIM_ENABLE_DMA(MOTOR_1_TIM, TIM_DMA_CC1);
+   __HAL_TIM_ENABLE_DMA(&MOTOR1_TIM, TIM_DMA_CC1);
 //   __HAL_TIM_ENABLE_DMA(MOTOR_2_TIM, MOTOR_2_TIM_CC);
 //   __HAL_TIM_ENABLE_DMA(MOTOR_3_TIM, MOTOR_3_TIM_CC);
 //   __HAL_TIM_ENABLE_DMA(MOTOR_4_TIM, MOTOR_4_TIM_CC);
