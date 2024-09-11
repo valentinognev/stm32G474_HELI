@@ -32,6 +32,8 @@ extern "C" {
 
 /* USER CODE END Includes */
 
+extern ADC_HandleTypeDef hadc1;
+
 /* USER CODE BEGIN Private defines */
 
 /* USER CODE END Private defines */
@@ -44,7 +46,6 @@ void AdcDmaTransferComplete_Callback();
 void AdcDmaTransferError_Callback();
 void AdcGrpRegularSequenceConvComplete_Callback();
 void AdcGrpRegularOverrunError_Callback(void);
-void read_ADC(uint16_t* PHASE_Voltage, uint16_t* AVGSPEED_Voltage, uint16_t* AMPSPEED_Voltage);
 /* USER CODE END Prototypes */
 
 #ifdef __cplusplus

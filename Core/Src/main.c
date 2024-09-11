@@ -36,6 +36,14 @@
 
 /* Private typedef -----------------------------------------------------------*/
 /* USER CODE BEGIN PTD */
+/* Definitions of data related to this example */
+  /* Definition of ADCx conversions data table size */
+  /* Size of array set to ADC sequencer number of ranks converted,            */
+  /* to have a rank in each array address.                                    */
+  #define ADC_CONVERTED_DATA_BUFFER_SIZE   ((uint32_t)   3)
+  #define VDDA_APPLI                       ((uint32_t) 3300)    /* Value of analog voltage supply Vdda (unit: mV) */
+/* Private macro -------------------------------------------------------------*/
+/* Private variables ---------------------------------------------------------*/
 
 /* USER CODE END PTD */
 
@@ -55,6 +63,10 @@
 /* Private variables ---------------------------------------------------------*/
 
 /* USER CODE BEGIN PV */
+
+/* Variables for ADC conversion data */
+__IO uint32_t aADCxConvertedData[ADC_CONVERTED_DATA_BUFFER_SIZE]; /* ADC group regular conversion data */
+
 uint16_t my_motor_value[4] = {2345, 0, 0, 0};
 #define sinMAX (560)
 const int32_t sinedata[360] = {0,10,20,29,39,49,59,68,78,88,97,107,116,126,135,145,154,164,173,182,192,201,210,219,228,
@@ -99,9 +111,9 @@ uint16_t SETTINGS2 = 0;
 int32_t timerData = 0;
 float true_angle = 0.0f;
 
-__IO uint16_t PHASE_Voltage = 0;        /* Value of voltage on GPIO pin (on which is mapped ADC channel) calculated from ADC conversion data (unit: mV) */
-__IO uint16_t AVGSPEED_Voltage = 0;        /* Value of voltage on GPIO pin (on which is mapped ADC channel) calculated from ADC conversion data (unit: mV) */
-__IO uint16_t AMPSPEED_Voltage = 0;        /* Value of voltage on GPIO pin (on which is mapped ADC channel) calculated from ADC conversion data (unit: mV) */
+__IO uint32_t PHASE_Voltage = 0;        /* Value of voltage on GPIO pin (on which is mapped ADC channel) calculated from ADC conversion data (unit: mV) */
+__IO uint32_t AVGSPEED_Voltage = 0;        /* Value of voltage on GPIO pin (on which is mapped ADC channel) calculated from ADC conversion data (unit: mV) */
+__IO uint32_t AMPSPEED_Voltage = 0;        /* Value of voltage on GPIO pin (on which is mapped ADC channel) calculated from ADC conversion data (unit: mV) */
 
 extern float frequencySERVO_PITCH, frequencySERVO_ROLL, frequencySERVO_3RD, frequencyMOTOR_MAIN, frequencyMOTOR_TAIL;
 extern float widthSERVO_PITCH, widthSERVO_ROLL, widthSERVO_3RD, widthMOTOR_MAIN, widthMOTOR_TAIL;
@@ -224,7 +236,6 @@ int main(void)
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
-  Activate_ADC();
 
   int32_t avgSpeed = 0;
   int32_t ampSpeed = 0;
@@ -241,6 +252,8 @@ int main(void)
   DebugScopeStartWrite(&debugData);
   while (1)
   {
+    HAL_ADC_Start_DMA(&hadc1, aADCxConvertedData, ADC_CONVERTED_DATA_BUFFER_SIZE);
+
     HAL_StatusTypeDef status1 = HAL_TIM_IC_Start_DMA(&htim2, TIM_CHANNEL_1, riseDataSERVO_PITCH, PWMNUMVAL);
     HAL_StatusTypeDef status2 = HAL_TIM_IC_Start_DMA(&htim2, TIM_CHANNEL_2, fallDataSERVO_PITCH, PWMNUMVAL);
     HAL_StatusTypeDef status3 = HAL_TIM_IC_Start_DMA(&htim2, TIM_CHANNEL_3, riseDataSERVO_ROLL, PWMNUMVAL);
@@ -314,7 +327,6 @@ int main(void)
       continue;
     }
 
-    read_ADC(&PHASE_Voltage, &AVGSPEED_Voltage, &AMPSPEED_Voltage);
     avgSpeed = VoltageToAVGSpeed(AVGSPEED_Voltage);
     if (avgSpeed>1950)
     {
@@ -413,6 +425,19 @@ uint16_t VoltageToAmpSpeed(const uint16_t voltage, const uint16_t curspeed)
 uint16_t VoltageToPhase(const uint16_t voltage)
 {
   return (uint16_t)((uint32_t)(voltage - MINVOLTAGE)* 360 /(MAXVOLTAGE - MINVOLTAGE)) ;
+}
+
+void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc)
+{
+    // Conversion Complete & DMA Transfer Complete As Well
+    // So The AD_RES_BUFFER Is Now Updated & Let's Move Values To The PWM CCRx
+    // Update The PWM Channels With Latest ADC Scan Conversion Results
+    // PHASE_Voltage = aADCxConvertedData[0];  // ADC CH6 -> PWM CH1
+    // AVGSPEED_Voltage = aADCxConvertedData[1];  // ADC CH7 -> PWM CH2
+    // AMPSPEED_Voltage = aADCxConvertedData[2];  // ADC CH8 -> PWM CH3
+  AVGSPEED_Voltage     = __HAL_ADC_CALC_DATA_TO_VOLTAGE(VDDA_APPLI, aADCxConvertedData[0], LL_ADC_RESOLUTION_12B);
+  AMPSPEED_Voltage     = __HAL_ADC_CALC_DATA_TO_VOLTAGE(VDDA_APPLI, aADCxConvertedData[1], LL_ADC_RESOLUTION_12B);
+  PHASE_Voltage        = __HAL_ADC_CALC_DATA_TO_VOLTAGE(VDDA_APPLI, aADCxConvertedData[2], LL_ADC_RESOLUTION_12B);
 }
 
 /* USER CODE END 4 */

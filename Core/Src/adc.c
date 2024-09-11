@@ -23,55 +23,11 @@
 /* USER CODE BEGIN 0 */
 #include "main.h"
 #include "stm32g4xx_ll_adc.h"
-
-  #define ADC_CALIBRATION_TIMEOUT_MS       ((uint32_t)   1)
-  #define ADC_ENABLE_TIMEOUT_MS            ((uint32_t)   1)
-  #define ADC_DISABLE_TIMEOUT_MS           ((uint32_t)   1)
-  #define ADC_STOP_CONVERSION_TIMEOUT_MS   ((uint32_t)   1)
-  #define ADC_CONVERSION_TIMEOUT_MS        ((uint32_t)   2)
-
-  /* Delay between ADC end of calibration and ADC enable.                     */
-  /* Delay estimation in CPU cycles: Case of ADC enable done                  */
-  /* immediately after ADC calibration, ADC clock setting slow                */
-  /* (LL_ADC_CLOCK_ASYNC_DIV32). Use a higher delay if ratio                  */
-  /* (CPU clock / ADC clock) is above 32.                                     */
-  #define ADC_DELAY_CALIB_ENABLE_CPU_CYCLES  (LL_ADC_DELAY_CALIB_ENABLE_ADC_CYCLES * 32)
-
-/* Definitions of environment analog values */
-  /* Value of analog reference voltage (Vref+), connected to analog voltage   */
-  /* supply Vdda (unit: mV).                                                  */
-  #define VDDA_APPLI                       ((uint32_t)3300)
-
-/* Definitions of data related to this example */
-  /* Definition of ADCx conversions data table size */
-  /* Size of array set to ADC sequencer number of ranks converted,            */
-  /* to have a rank in each array address.                                    */
-  #define ADC_CONVERTED_DATA_BUFFER_SIZE   ((uint32_t)   3)
-/* Private macro -------------------------------------------------------------*/
-/* Private variables ---------------------------------------------------------*/
-
-/* Variables for ADC conversion data */
-__IO uint16_t aADCxConvertedData[ADC_CONVERTED_DATA_BUFFER_SIZE]; /* ADC group regular conversion data */
-
-/* Variable to report status of DMA transfer of ADC group regular conversions */
-/*  0: DMA transfer is not completed                                          */
-/*  1: DMA transfer is completed                                              */
-/*  2: DMA transfer has not been started yet (initial state)                  */
-__IO uint8_t ubDmaTransferStatus = 2; /* Variable set into DMA interruption callback */
-
-/* Variable to report status of ADC group regular sequence conversions:       */
-/*  0: ADC group regular sequence conversions are not completed               */
-/*  1: ADC group regular sequence conversions are completed                   */
-__IO uint8_t ubAdcGrpRegularSequenceConvStatus = 0; /* Variable set into ADC interruption callback */
-
-/* Variable to report number of ADC group regular sequence completed          */
-static uint32_t ubAdcGrpRegularSequenceConvCount = 0; /* Variable set into ADC interruption callback */
-
-/* Variables for ADC conversion data computation to physical values */
-__IO uint16_t uhADCxConvertedData_VrefInt_mVolt = 0;            /* Value of internal voltage reference VrefInt calculated from ADC conversion data (unit: mV) */
-__IO  int16_t hADCxConvertedData_Temperature_DegreeCelsius = 0; /* Value of temperature calculated from ADC conversion data (unit: degree Celsius) */
-__IO uint16_t uhADCxConvertedData_VrefAnalog_mVolt = 0;         /* Value of analog reference voltage (Vref+), connected to analog voltage supply Vdda, calculated from ADC conversion data (unit: mV) */
+ 
 /* USER CODE END 0 */
+
+ADC_HandleTypeDef hadc1;
+DMA_HandleTypeDef hdma_adc1;
 
 /* ADC1 init function */
 void MX_ADC1_Init(void)
@@ -81,440 +37,170 @@ void MX_ADC1_Init(void)
 
   /* USER CODE END ADC1_Init 0 */
 
-  LL_ADC_InitTypeDef ADC_InitStruct = {0};
-  LL_ADC_REG_InitTypeDef ADC_REG_InitStruct = {0};
-  LL_ADC_CommonInitTypeDef ADC_CommonInitStruct = {0};
-
-  LL_GPIO_InitTypeDef GPIO_InitStruct = {0};
-  RCC_PeriphCLKInitTypeDef PeriphClkInit = {0};
-
-  /** Initializes the peripherals clocks
-  */
-  PeriphClkInit.PeriphClockSelection = RCC_PERIPHCLK_ADC12;
-  PeriphClkInit.Adc12ClockSelection = RCC_ADC12CLKSOURCE_SYSCLK;
-  if (HAL_RCCEx_PeriphCLKConfig(&PeriphClkInit) != HAL_OK)
-  {
-    Error_Handler();
-  }
-
-  /* Peripheral clock enable */
-  LL_AHB2_GRP1_EnableClock(LL_AHB2_GRP1_PERIPH_ADC12);
-
-  LL_AHB2_GRP1_EnableClock(LL_AHB2_GRP1_PERIPH_GPIOA);
-  /**ADC1 GPIO Configuration
-  PA1   ------> ADC1_IN2
-  PA2   ------> ADC1_IN3
-  PA3   ------> ADC1_IN4
-  */
-  GPIO_InitStruct.Pin = LL_GPIO_PIN_1;
-  GPIO_InitStruct.Mode = LL_GPIO_MODE_ANALOG;
-  GPIO_InitStruct.Pull = LL_GPIO_PULL_NO;
-  LL_GPIO_Init(GPIOA, &GPIO_InitStruct);
-
-  GPIO_InitStruct.Pin = LL_GPIO_PIN_2;
-  GPIO_InitStruct.Mode = LL_GPIO_MODE_ANALOG;
-  GPIO_InitStruct.Pull = LL_GPIO_PULL_NO;
-  LL_GPIO_Init(GPIOA, &GPIO_InitStruct);
-
-  GPIO_InitStruct.Pin = LL_GPIO_PIN_3;
-  GPIO_InitStruct.Mode = LL_GPIO_MODE_ANALOG;
-  GPIO_InitStruct.Pull = LL_GPIO_PULL_NO;
-  LL_GPIO_Init(GPIOA, &GPIO_InitStruct);
-
-  /* ADC1 DMA Init */
-
-  /* ADC1 Init */
-  LL_DMA_SetPeriphRequest(DMA2, LL_DMA_CHANNEL_3, LL_DMAMUX_REQ_ADC1);
-
-  LL_DMA_SetDataTransferDirection(DMA2, LL_DMA_CHANNEL_3, LL_DMA_DIRECTION_PERIPH_TO_MEMORY);
-
-  LL_DMA_SetChannelPriorityLevel(DMA2, LL_DMA_CHANNEL_3, LL_DMA_PRIORITY_LOW);
-
-  LL_DMA_SetMode(DMA2, LL_DMA_CHANNEL_3, LL_DMA_MODE_NORMAL);
-
-  LL_DMA_SetPeriphIncMode(DMA2, LL_DMA_CHANNEL_3, LL_DMA_PERIPH_NOINCREMENT);
-
-  LL_DMA_SetMemoryIncMode(DMA2, LL_DMA_CHANNEL_3, LL_DMA_MEMORY_INCREMENT);
-
-  LL_DMA_SetPeriphSize(DMA2, LL_DMA_CHANNEL_3, LL_DMA_PDATAALIGN_HALFWORD);
-
-  LL_DMA_SetMemorySize(DMA2, LL_DMA_CHANNEL_3, LL_DMA_MDATAALIGN_HALFWORD);
-
-  /* ADC1 interrupt Init */
-  NVIC_SetPriority(ADC1_2_IRQn, NVIC_EncodePriority(NVIC_GetPriorityGrouping(),0, 0));
-  NVIC_EnableIRQ(ADC1_2_IRQn);
+  ADC_MultiModeTypeDef multimode = {0};
+  ADC_ChannelConfTypeDef sConfig = {0};
 
   /* USER CODE BEGIN ADC1_Init 1 */
 
-    /* Set ADC clock (conversion clock) common to several ADC instances */
-    LL_ADC_SetCommonClock(__LL_ADC_COMMON_INSTANCE(ADC1), LL_ADC_CLOCK_SYNC_PCLK_DIV2);
-   
   /* USER CODE END ADC1_Init 1 */
 
   /** Common config
   */
-  ADC_InitStruct.Resolution = LL_ADC_RESOLUTION_12B;
-  ADC_InitStruct.DataAlignment = LL_ADC_DATA_ALIGN_RIGHT;
-  ADC_InitStruct.LowPowerMode = LL_ADC_LP_MODE_NONE;
-  LL_ADC_Init(ADC1, &ADC_InitStruct);
-  ADC_REG_InitStruct.TriggerSource = LL_ADC_REG_TRIG_SOFTWARE;
-  ADC_REG_InitStruct.SequencerLength = LL_ADC_REG_SEQ_SCAN_ENABLE_3RANKS;
-  ADC_REG_InitStruct.SequencerDiscont = LL_ADC_REG_SEQ_DISCONT_DISABLE;
-  ADC_REG_InitStruct.ContinuousMode = LL_ADC_REG_CONV_SINGLE;
-  ADC_REG_InitStruct.DMATransfer = LL_ADC_REG_DMA_TRANSFER_UNLIMITED;
-  ADC_REG_InitStruct.Overrun = LL_ADC_REG_OVR_DATA_OVERWRITTEN;
-  LL_ADC_REG_Init(ADC1, &ADC_REG_InitStruct);
-  LL_ADC_SetGainCompensation(ADC1, 0);
-  LL_ADC_SetOverSamplingScope(ADC1, LL_ADC_OVS_DISABLE);
-  ADC_CommonInitStruct.CommonClock = LL_ADC_CLOCK_SYNC_PCLK_DIV4;
-  ADC_CommonInitStruct.Multimode = LL_ADC_MULTI_INDEPENDENT;
-  LL_ADC_CommonInit(__LL_ADC_COMMON_INSTANCE(ADC1), &ADC_CommonInitStruct);
-
-  /* Disable ADC deep power down (enabled by default after reset state) */
-  LL_ADC_DisableDeepPowerDown(ADC1);
-  /* Enable ADC internal voltage regulator */
-  LL_ADC_EnableInternalRegulator(ADC1);
-  /* Delay for ADC internal voltage regulator stabilization. */
-  /* Compute number of CPU cycles to wait for, from delay in us. */
-  /* Note: Variable divided by 2 to compensate partially */
-  /* CPU processing cycles (depends on compilation optimization). */
-  /* Note: If system core clock frequency is below 200kHz, wait time */
-  /* is only a few CPU processing cycles. */
-  uint32_t wait_loop_index;
-  wait_loop_index = ((LL_ADC_DELAY_INTERNAL_REGUL_STAB_US * (SystemCoreClock / (100000 * 2))) / 10);
-  while(wait_loop_index != 0)
+  hadc1.Instance = ADC1;
+  hadc1.Init.ClockPrescaler = ADC_CLOCK_SYNC_PCLK_DIV4;
+  hadc1.Init.Resolution = ADC_RESOLUTION_12B;
+  hadc1.Init.DataAlign = ADC_DATAALIGN_RIGHT;
+  hadc1.Init.GainCompensation = 0;
+  hadc1.Init.ScanConvMode = ADC_SCAN_ENABLE;
+  hadc1.Init.EOCSelection = ADC_EOC_SEQ_CONV;
+  hadc1.Init.LowPowerAutoWait = DISABLE;
+  hadc1.Init.ContinuousConvMode = DISABLE;
+  hadc1.Init.NbrOfConversion = 3;
+  hadc1.Init.DiscontinuousConvMode = DISABLE;
+  hadc1.Init.ExternalTrigConv = ADC_SOFTWARE_START;
+  hadc1.Init.ExternalTrigConvEdge = ADC_EXTERNALTRIGCONVEDGE_NONE;
+  hadc1.Init.DMAContinuousRequests = ENABLE;
+  hadc1.Init.Overrun = ADC_OVR_DATA_OVERWRITTEN;
+  hadc1.Init.OversamplingMode = DISABLE;
+  if (HAL_ADC_Init(&hadc1) != HAL_OK)
   {
-    wait_loop_index--;
+    Error_Handler();
+  }
+
+  /** Configure the ADC multi-mode
+  */
+  multimode.Mode = ADC_MODE_INDEPENDENT;
+  if (HAL_ADCEx_MultiModeConfigChannel(&hadc1, &multimode) != HAL_OK)
+  {
+    Error_Handler();
   }
 
   /** Configure Regular Channel
   */
-  LL_ADC_REG_SetSequencerRanks(ADC1, LL_ADC_REG_RANK_1, LL_ADC_CHANNEL_4);
-  LL_ADC_SetChannelSamplingTime(ADC1, LL_ADC_CHANNEL_4, LL_ADC_SAMPLINGTIME_2CYCLES_5);
-  LL_ADC_SetChannelSingleDiff(ADC1, LL_ADC_CHANNEL_4, LL_ADC_SINGLE_ENDED);
+  sConfig.Channel = ADC_CHANNEL_2;
+  sConfig.Rank = ADC_REGULAR_RANK_1;
+  sConfig.SamplingTime = ADC_SAMPLETIME_2CYCLES_5;
+  sConfig.SingleDiff = ADC_SINGLE_ENDED;
+  sConfig.OffsetNumber = ADC_OFFSET_NONE;
+  sConfig.Offset = 0;
+  if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
 
   /** Configure Regular Channel
   */
-  LL_ADC_REG_SetSequencerRanks(ADC1, LL_ADC_REG_RANK_2, LL_ADC_CHANNEL_2);
-  LL_ADC_SetChannelSamplingTime(ADC1, LL_ADC_CHANNEL_2, LL_ADC_SAMPLINGTIME_2CYCLES_5);
-  LL_ADC_SetChannelSingleDiff(ADC1, LL_ADC_CHANNEL_2, LL_ADC_SINGLE_ENDED);
+  sConfig.Channel = ADC_CHANNEL_3;
+  sConfig.Rank = ADC_REGULAR_RANK_2;
+  if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
 
   /** Configure Regular Channel
   */
-  LL_ADC_REG_SetSequencerRanks(ADC1, LL_ADC_REG_RANK_3, LL_ADC_CHANNEL_3);
-  LL_ADC_SetChannelSamplingTime(ADC1, LL_ADC_CHANNEL_3, LL_ADC_SAMPLINGTIME_2CYCLES_5);
-  LL_ADC_SetChannelSingleDiff(ADC1, LL_ADC_CHANNEL_3, LL_ADC_SINGLE_ENDED);
+  sConfig.Channel = ADC_CHANNEL_4;
+  sConfig.Rank = ADC_REGULAR_RANK_3;
+  if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
   /* USER CODE BEGIN ADC1_Init 2 */
-  
-/* Set DMA transfer addresses of source and destination */
-  LL_DMA_ConfigAddresses(DMA2,
-                        LL_DMA_CHANNEL_3,
-                         LL_ADC_DMA_GetRegAddr(ADC1, LL_ADC_DMA_REG_REGULAR_DATA),
-                         (uint32_t)&aADCxConvertedData,
-                         LL_DMA_DIRECTION_PERIPH_TO_MEMORY);
-  
-  /* Set DMA transfer size */
-  LL_DMA_SetDataLength(DMA2, LL_DMA_CHANNEL_3, ADC_CONVERTED_DATA_BUFFER_SIZE);
-  
-  /* Enable DMA transfer interruption: transfer complete */
-  LL_DMA_EnableIT_TC(DMA2, LL_DMA_CHANNEL_3);
-
-  /* Enable DMA transfer interruption: transfer error */
-  LL_DMA_EnableIT_TE(DMA2, LL_DMA_CHANNEL_3);
-  
-
-  /*## Configuration of ADC interruptions ####################################*/
-  /* Enable interruption ADC group regular end of sequence conversions */
-  LL_ADC_EnableIT_EOS(ADC1);
-
-  /* Enable interruption ADC group regular overrun */
-  LL_ADC_EnableIT_OVR(ADC1);
-  
-  /* Note: in this example, ADC group regular end of conversions              */
-  /*       (number of ADC conversions defined by DMA buffer size)             */
-  /*       are notified by DMA transfer interruptions).                       */
-  /*       ADC interruptions of end of conversion are enabled optionally,     */
-  /*       as demonstration purpose in this example.                          */
-
-  /*## Activation of DMA #####################################################*/
-  /* Enable the DMA transfer */
-  LL_DMA_EnableChannel(DMA2,LL_DMA_CHANNEL_3);
-
+ 
   /* USER CODE END ADC1_Init 2 */
 
 }
 
+void HAL_ADC_MspInit(ADC_HandleTypeDef* adcHandle)
+{
+
+  GPIO_InitTypeDef GPIO_InitStruct = {0};
+  RCC_PeriphCLKInitTypeDef PeriphClkInit = {0};
+  if(adcHandle->Instance==ADC1)
+  {
+  /* USER CODE BEGIN ADC1_MspInit 0 */
+
+  /* USER CODE END ADC1_MspInit 0 */
+
+  /** Initializes the peripherals clocks
+  */
+    PeriphClkInit.PeriphClockSelection = RCC_PERIPHCLK_ADC12;
+    PeriphClkInit.Adc12ClockSelection = RCC_ADC12CLKSOURCE_SYSCLK;
+    if (HAL_RCCEx_PeriphCLKConfig(&PeriphClkInit) != HAL_OK)
+    {
+      Error_Handler();
+    }
+
+    /* ADC1 clock enable */
+    __HAL_RCC_ADC12_CLK_ENABLE();
+
+    __HAL_RCC_GPIOA_CLK_ENABLE();
+    /**ADC1 GPIO Configuration
+    PA1     ------> ADC1_IN2
+    PA2     ------> ADC1_IN3
+    PA3     ------> ADC1_IN4
+    */
+    GPIO_InitStruct.Pin = AVGSPEEED_Pin|AMPSPEED_Pin|PHASE_Pin;
+    GPIO_InitStruct.Mode = GPIO_MODE_ANALOG;
+    GPIO_InitStruct.Pull = GPIO_NOPULL;
+    HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+
+    /* ADC1 DMA Init */
+    /* ADC1 Init */
+    hdma_adc1.Instance = DMA2_Channel3;
+    hdma_adc1.Init.Request = DMA_REQUEST_ADC1;
+    hdma_adc1.Init.Direction = DMA_PERIPH_TO_MEMORY;
+    hdma_adc1.Init.PeriphInc = DMA_PINC_DISABLE;
+    hdma_adc1.Init.MemInc = DMA_MINC_ENABLE;
+    hdma_adc1.Init.PeriphDataAlignment = DMA_PDATAALIGN_WORD;
+    hdma_adc1.Init.MemDataAlignment = DMA_MDATAALIGN_WORD;
+    hdma_adc1.Init.Mode = DMA_NORMAL;
+    hdma_adc1.Init.Priority = DMA_PRIORITY_LOW;
+    if (HAL_DMA_Init(&hdma_adc1) != HAL_OK)
+    {
+      Error_Handler();
+    }
+
+    __HAL_LINKDMA(adcHandle,DMA_Handle,hdma_adc1);
+
+    /* ADC1 interrupt Init */
+    HAL_NVIC_SetPriority(ADC1_2_IRQn, 0, 0);
+    HAL_NVIC_EnableIRQ(ADC1_2_IRQn);
+  /* USER CODE BEGIN ADC1_MspInit 1 */
+
+  /* USER CODE END ADC1_MspInit 1 */
+  }
+}
+
+void HAL_ADC_MspDeInit(ADC_HandleTypeDef* adcHandle)
+{
+
+  if(adcHandle->Instance==ADC1)
+  {
+  /* USER CODE BEGIN ADC1_MspDeInit 0 */
+
+  /* USER CODE END ADC1_MspDeInit 0 */
+    /* Peripheral clock disable */
+    __HAL_RCC_ADC12_CLK_DISABLE();
+
+    /**ADC1 GPIO Configuration
+    PA1     ------> ADC1_IN2
+    PA2     ------> ADC1_IN3
+    PA3     ------> ADC1_IN4
+    */
+    HAL_GPIO_DeInit(GPIOA, AVGSPEEED_Pin|AMPSPEED_Pin|PHASE_Pin);
+
+    /* ADC1 DMA DeInit */
+    HAL_DMA_DeInit(adcHandle->DMA_Handle);
+
+    /* ADC1 interrupt Deinit */
+    HAL_NVIC_DisableIRQ(ADC1_2_IRQn);
+  /* USER CODE BEGIN ADC1_MspDeInit 1 */
+
+  /* USER CODE END ADC1_MspDeInit 1 */
+  }
+}
+
 /* USER CODE BEGIN 1 */
-/**
-  * @brief  Perform ADC activation procedure to make it ready to convert
-  *         (ADC instance: ADC1).
-  * @note   Operations:
-  *         - ADC instance
-  *           - Enable ADC
-  *         - ADC group regular
-  *           none: ADC conversion start-stop to be performed
-  *                 after this function
-  *         - ADC group injected
-  *           none: ADC conversion start-stop to be performed
-  *                 after this function
-  * @param  None
-  * @retval None
-  */
-void Activate_ADC(void)
-{
-  __IO uint32_t wait_loop_index = 0;
-  #if (USE_TIMEOUT == 1)
-  uint32_t Timeout = 0; /* Variable used for timeout management */
-  #endif /* USE_TIMEOUT */
-  
-  /*## Operation on ADC hierarchical scope: ADC instance #####################*/
-  
-  /* Note: Hardware constraint (refer to description of the functions         */
-  /*       below):                                                            */
-  /*       On this STM32 series, setting of these features is conditioned to   */
-  /*       ADC state:                                                         */
-  /*       ADC must be disabled.                                              */
-  /* Note: In this example, all these checks are not necessary but are        */
-  /*       implemented anyway to show the best practice usages                */
-  /*       corresponding to reference manual procedure.                       */
-  /*       Software can be optimized by removing some of these checks, if     */
-  /*       they are not relevant considering previous settings and actions    */
-  /*       in user application.                                               */
-  if (LL_ADC_IsEnabled(ADC1) == 0)
-  {
-    /* Disable ADC deep power down (enabled by default after reset state) */
-    LL_ADC_DisableDeepPowerDown(ADC1);
-    
-    /* Enable ADC internal voltage regulator */
-    LL_ADC_EnableInternalRegulator(ADC1);
-    
-    /* Delay for ADC internal voltage regulator stabilization.                */
-    /* Compute number of CPU cycles to wait for, from delay in us.            */
-    /* Note: Variable divided by 2 to compensate partially                    */
-    /*       CPU processing cycles (depends on compilation optimization).     */
-    /* Note: If system core clock frequency is below 200kHz, wait time        */
-    /*       is only a few CPU processing cycles.                             */
-    wait_loop_index = ((LL_ADC_DELAY_INTERNAL_REGUL_STAB_US * (SystemCoreClock / (100000 * 2))) / 10);
-    while(wait_loop_index != 0)
-    {
-      wait_loop_index--;
-    }
-    
-    /* Run ADC self calibration */
-    LL_ADC_StartCalibration(ADC1, LL_ADC_SINGLE_ENDED);
-    
-    /* Poll for ADC effectively calibrated */
-    #if (USE_TIMEOUT == 1)
-    Timeout = ADC_CALIBRATION_TIMEOUT_MS;
-    #endif /* USE_TIMEOUT */
-    
-    while (LL_ADC_IsCalibrationOnGoing(ADC1) != 0)
-    {
-    #if (USE_TIMEOUT == 1)
-      /* Check Systick counter flag to decrement the time-out value */
-      if (LL_SYSTICK_IsActiveCounterFlag())
-      {
-        if(Timeout-- == 0)
-        {
-        /* Time-out occurred. Set LED to blinking mode */
-        LED_Blinking(LED_BLINK_ERROR);
-        }
-      }
-    #endif /* USE_TIMEOUT */
-    }
-    
-    /* Delay between ADC end of calibration and ADC enable.                   */
-    /* Note: Variable divided by 2 to compensate partially                    */
-    /*       CPU processing cycles (depends on compilation optimization).     */
-    wait_loop_index = (ADC_DELAY_CALIB_ENABLE_CPU_CYCLES >> 1);
-    while(wait_loop_index != 0)
-    {
-      wait_loop_index--;
-    }
-    
-    /* Enable ADC */
-    LL_ADC_Enable(ADC1);
-    
-    /* Poll for ADC ready to convert */
-    #if (USE_TIMEOUT == 1)
-    Timeout = ADC_ENABLE_TIMEOUT_MS;
-    #endif /* USE_TIMEOUT */
-    
-    while (LL_ADC_IsActiveFlag_ADRDY(ADC1) == 0)
-    {
-    #if (USE_TIMEOUT == 1)
-      /* Check Systick counter flag to decrement the time-out value */
-      if (LL_SYSTICK_IsActiveCounterFlag())
-      {
-        if(Timeout-- == 0)
-        {
-        /* Time-out occurred. Set LED to blinking mode */
-        LED_Blinking(LED_BLINK_ERROR);
-        }
-      }
-    #endif /* USE_TIMEOUT */
-    }
-    
-    /* Note: ADC flag ADRDY is not cleared here to be able to check ADC       */
-    /*       status afterwards.                                               */
-    /*       This flag should be cleared at ADC Deactivation, before a new    */
-    /*       ADC activation, using function "LL_ADC_ClearFlag_ADRDY()".       */
-  }
-  
-  /*## Operation on ADC hierarchical scope: ADC group regular ################*/
-  /* Note: No operation on ADC group regular performed here.                  */
-  /*       ADC group regular conversions to be performed after this function  */
-  /*       using function:                                                    */
-  /*       "LL_ADC_REG_StartConversion();"                                    */
-  
-  /*## Operation on ADC hierarchical scope: ADC group injected ###############*/
-  /* Note: No operation on ADC group injected performed here.                 */
-  /*       ADC group injected conversions to be performed after this function */
-  /*       using function:                                                    */
-  /*       "LL_ADC_INJ_StartConversion();"                                    */
-  
-}
-/**
-  * @brief  DMA transfer complete callback
-  * @note   This function is executed when the transfer complete interrupt
-  *         is generated
-  * @retval None
-  */
-void AdcDmaTransferComplete_Callback()
-{
-  /* Update status variable of DMA transfer */
-  ubDmaTransferStatus = 1;
-  
-  /* Set LED depending on DMA transfer status */
-  /* - Turn-on if DMA transfer is completed */
-  /* - Turn-off if DMA transfer is not completed */
-  //LED_On();
-  
-  /* For this example purpose, check that DMA transfer status is matching     */
-  /* ADC group regular sequence status:                                       */
-  if (ubAdcGrpRegularSequenceConvStatus != 1)
-  {
-    AdcDmaTransferError_Callback();
-  }
-  
-  /* Reset status variable of ADC group regular sequence */
-  ubAdcGrpRegularSequenceConvStatus = 0;
-}
 
-/**
-  * @brief  DMA transfer error callback
-  * @note   This function is executed when the transfer error interrupt
-  *         is generated during DMA transfer
-  * @retval None
-  */
-void AdcDmaTransferError_Callback()
-{
-  /* Error detected during DMA transfer */
-  ubDmaTransferStatus = 2;
-  //LED_Blinking(LED_BLINK_ERROR);
-}
-
-/**
-  * @brief  ADC group regular end of sequence conversions interruption callback
-  * @note   This function is executed when the ADC group regular 
-  *         sequencer has converted all ranks of the sequence.
-  * @retval None
-  */
-void AdcGrpRegularSequenceConvComplete_Callback()
-{
-  /* Update status variable of ADC group regular sequence */
-  ubAdcGrpRegularSequenceConvStatus = 1;
-  ubAdcGrpRegularSequenceConvCount++;
-}
-
-/**
-  * @brief  ADC group regular overrun interruption callback
-  * @note   This function is executed when ADC group regular
-  *         overrun error occurs.
-  * @retval None
-  */
-void AdcGrpRegularOverrunError_Callback(void)
-{
-  /* Note: Disable ADC interruption that caused this error before entering in */
-  /*       infinite loop below.                                               */
-  
-  /* Disable ADC group regular overrun interruption */
-  LL_ADC_DisableIT_OVR(ADC1);
-  
-  /* Error from ADC */
-  //LED_Blinking(LED_BLINK_ERROR);
-}
-
-void read_ADC(uint16_t* PHASE_Voltage, uint16_t* AVGSPEED_Voltage, uint16_t* AMPSPEED_Voltage)
-{
-  /* Reset status variable of DMA transfer before performing a new ADC        */
-  /* conversion start of a sequence (in case of previous DMA transfer         */
-  /* completed).                                                              */
-  /* Note: Optionally, for this example purpose, check DMA transfer           */
-  /*       status before starting another ADC conversion.                     */
-  if (ubDmaTransferStatus != 0)
-  {
-    ubDmaTransferStatus = 0;
-  }
-  // else
-  // {
-  //   /* Error: Previous action (ADC conversion or DMA transfer) not yet        */
-  //   /* completed.                                                             */
-  //   LED_Blinking(LED_BLINK_ERROR);
-  // }
-  
-  /* Start ADC group regular conversion */
-  /* Note: Hardware constraint (refer to description of the functions         */
-  /*       below):                                                            */
-  /*       On this STM32 series, setting of these features are not             */
-  /*       conditioned to ADC state.                                          */
-  /*       However, in order to be compliant with other STM32 series          */
-  /*       and to show the best practice usages, ADC state is checked.        */
-  /*       Software can be optimized by removing some of these checks, if     */
-  /*       they are not relevant considering previous settings and actions    */
-  /*       in user application.                                               */
-  if (LL_ADC_IsEnabled(ADC1) == 1)
-  {
-    LL_ADC_REG_StartConversion(ADC1);
-  }
-    
-  /* Note: For this example purpose, number of ADC group regular sequences  */
-  /*       completed are stored into variable                               */
-  /*       "ubAdcGrpRegularSequenceConvCount"                               */
-  /*       (for debug: see variable content into watch window)              */
-  
-  /* Note: ADC conversions data are stored into array "aADCxConvertedData"  */
-  /*       (for debug: see variable content into watch window).             */
-  /*       Each rank of the sequence is at an address of the array:         */
-  /*       - aADCxConvertedData[0]: ADC channel set on rank1                */
-  /*                                (ADC1 channel 4)                        */
-  /*       - aADCxConvertedData[1]: ADC channel set on rank1                */
-  /*                                (ADC1 channel 4)                        */
-  /*       - aADCxConvertedData[2]: ADC channel set on rank1                */
-  /*                                (ADC1 channel 4)                        */
-  /*       - aADCxConvertedData[3]: ADC channel set on rank2                */
-  /*                                (ADC1 internal channel VrefInt)         */
-  /*       - aADCxConvertedData[4]: ADC channel set on rank3                */
-  /*                                (ADC1 internal channel temperature sensor)*/
-
-  /* Wait for ADC conversion and DMA transfer completion to process data */
-  while(ubDmaTransferStatus != 1)
-  {
-  }
-  
-  /* Computation of ADC conversions raw data to physical values             */
-  /* using LL ADC driver helper macro.                                      */
-  *PHASE_Voltage        = __LL_ADC_CALC_DATA_TO_VOLTAGE(VDDA_APPLI, aADCxConvertedData[0], LL_ADC_RESOLUTION_12B);
-  *AVGSPEED_Voltage        = __LL_ADC_CALC_DATA_TO_VOLTAGE(VDDA_APPLI, aADCxConvertedData[1], LL_ADC_RESOLUTION_12B);
-  *AMPSPEED_Voltage        = __LL_ADC_CALC_DATA_TO_VOLTAGE(VDDA_APPLI, aADCxConvertedData[2], LL_ADC_RESOLUTION_12B);
-  uhADCxConvertedData_VrefInt_mVolt            = __LL_ADC_CALC_DATA_TO_VOLTAGE(VDDA_APPLI, aADCxConvertedData[3], LL_ADC_RESOLUTION_12B);
-  hADCxConvertedData_Temperature_DegreeCelsius = __LL_ADC_CALC_TEMPERATURE_TYP_PARAMS(INTERNAL_TEMPSENSOR_AVGSLOPE, 
-                                                                                      INTERNAL_TEMPSENSOR_V25,
-                                                                                      INTERNAL_TEMPSENSOR_V25_TEMP,
-                                                                                      VDDA_APPLI,
-                                                                                      aADCxConvertedData[4],
-                                                                                      LL_ADC_RESOLUTION_12B);
-  
-  ubDmaTransferStatus == 0;
-}
 /* USER CODE END 1 */

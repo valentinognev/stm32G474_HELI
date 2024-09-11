@@ -58,6 +58,8 @@
 
 /* External variables --------------------------------------------------------*/
 extern PCD_HandleTypeDef hpcd_USB_FS;
+extern DMA_HandleTypeDef hdma_adc1;
+extern ADC_HandleTypeDef hadc1;
 extern DMA_HandleTypeDef hdma_spi1_rx;
 extern DMA_HandleTypeDef hdma_spi1_tx;
 extern DMA_HandleTypeDef hdma_tim1_ch1;
@@ -315,28 +317,10 @@ void DMA1_Channel7_IRQHandler(void)
   */
 void ADC1_2_IRQHandler(void)
 {
-  /* Check whether ADC group regular end of sequence conversions caused       */
-  /* the ADC interruption.                                                    */
-  if(LL_ADC_IsActiveFlag_EOS(ADC1) != 0)
-  {
-    /* Clear flag ADC group regular end of sequence conversions */
-    LL_ADC_ClearFlag_EOS(ADC1);
-    
-    /* Call interruption treatment function */
-    AdcGrpRegularSequenceConvComplete_Callback();
-  }
-  
-  /* Check whether ADC group regular overrun caused the ADC interruption */
-  if(LL_ADC_IsActiveFlag_OVR(ADC1) != 0)
-  {
-    /* Clear flag ADC group regular overrun */
-    LL_ADC_ClearFlag_OVR(ADC1);
-    
-    /* Call interruption treatment function */
-    AdcGrpRegularOverrunError_Callback();
-  }
-  /* USER CODE END ADC1_2_IRQn 0 */
+  /* USER CODE BEGIN ADC1_2_IRQn 0 */
 
+  /* USER CODE END ADC1_2_IRQn 0 */
+  HAL_ADC_IRQHandler(&hadc1);
   /* USER CODE BEGIN ADC1_2_IRQn 1 */
 
   /* USER CODE END ADC1_2_IRQn 1 */
@@ -390,27 +374,9 @@ void DMA2_Channel2_IRQHandler(void)
 void DMA2_Channel3_IRQHandler(void)
 {
   /* USER CODE BEGIN DMA2_Channel3_IRQn 0 */
-  /* Check whether DMA transfer complete caused the DMA interruption */
-  if(LL_DMA_IsActiveFlag_TC3(DMA2) == 1)
-  {
-    /*  Clear Stream  transfer complete flag*/
-    LL_DMA_ClearFlag_GI3(DMA2);
-    /* Call interruption treatment function */
-    AdcDmaTransferComplete_Callback();
-  }
-  
-  /* Check whether DMA transfer error caused the DMA interruption */
-  if(LL_DMA_IsActiveFlag_TE3(DMA2) == 1)
-  {
-    /* Clear flag DMA transfer error */
-    LL_DMA_ClearFlag_TE3(DMA2);
-    
-    /* Call interruption treatment function */
-    AdcDmaTransferError_Callback();
-  }
-
+ 
   /* USER CODE END DMA2_Channel3_IRQn 0 */
-
+  HAL_DMA_IRQHandler(&hdma_adc1);
   /* USER CODE BEGIN DMA2_Channel3_IRQn 1 */
 
   /* USER CODE END DMA2_Channel3_IRQn 1 */
