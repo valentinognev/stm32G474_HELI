@@ -23,7 +23,7 @@
 #define DSHOT_FRAME_SIZE      18
 
 // Timer Clock
-#define TIMER_CLOCK				100000000	// 100MHz
+#define TIMER_CLOCK				170000000	// 170MHz
 
 // MOTOR 1 (PA3) - TIM1 Channel 1, DMA2 Stream 1
 #define MOTOR1_TIM             (htim17)
@@ -43,16 +43,6 @@
 
 
 /* Definition */
-#define MHZ_TO_HZ(x) 			((x) * 1000000)
-
-#define DSHOT600_HZ     		MHZ_TO_HZ(12)
-#define DSHOT300_HZ     		MHZ_TO_HZ(6)
-#define DSHOT150_HZ     		MHZ_TO_HZ(3)
-
-#define MOTOR_BIT_0            	7
-#define MOTOR_BIT_1            	14
-#define MOTOR_BITLENGTH        	20
-
 #define DSHOT_FRAME_SIZE       	16
 #define DSHOT_DMA_BUFFER_SIZE   18 /* resolution + frame reset (2us) */
 
@@ -66,13 +56,14 @@ typedef enum
 {
     DSHOT150,
     DSHOT300,
-    DSHOT600
+    DSHOT600,
+    DSHOT1200
 } dshot_type_e;
 
 
 /* Functions */
 void dshot_init(dshot_type_e dshot_type);
-void dshot_write(uint16_t* motor_value);
+void dshot_send(uint16_t* motor_value);
 
 
 #endif /* __DSHOT_H__ */

@@ -227,7 +227,7 @@ int main(void)
 
   for (int i = 0; i < 10; i++)
   {
-    dshot_write(0+0); 
+    dshot_send(0+0); 
     HAL_Delay(1);
   }
 
@@ -348,7 +348,7 @@ int main(void)
     totalSpeed = min(totalSpeed, 2000);
     totalSpeed = max(totalSpeed, 0);
 
-    dshot_write(&totalSpeed);
+    dshot_send(&totalSpeed);
 
     data[0] = (float)spiAngle32;
     data[1] = (float)totalSpeed;
