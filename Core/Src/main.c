@@ -252,6 +252,8 @@ int main(void)
   DebugScopeStartWrite(&debugData);
   HAL_ADC_Start_DMA(&hadc1, aADCxConvertedData, ADC_CONVERTED_DATA_BUFFER_SIZE);
   HAL_TIM_Base_Start(&htim6);
+
+  uint32_t buffer[18] = {0};
   /*## Start PWM signal generation in DMA mode ############################*/ 
   while (1)
   {
@@ -263,6 +265,7 @@ int main(void)
     HAL_StatusTypeDef status6 = HAL_TIM_IC_Start_DMA(&htim3, TIM_CHANNEL_2, fallDataSERVO_3RD, PWMNUMVAL);
     HAL_StatusTypeDef status7 = HAL_TIM_IC_Start_DMA(&htim4, TIM_CHANNEL_1, riseDataMOTOR_MAIN, PWMNUMVAL);
     HAL_StatusTypeDef status8 = HAL_TIM_IC_Start_DMA(&htim4, TIM_CHANNEL_2, fallDataMOTOR_MAIN, PWMNUMVAL);
+
     HAL_StatusTypeDef status9 = HAL_TIM_IC_Start_DMA(&htim5, TIM_CHANNEL_1, riseDataMOTOR_TAIL, PWMNUMVAL);
     HAL_StatusTypeDef status10 = HAL_TIM_IC_Start_DMA(&htim5, TIM_CHANNEL_2, fallDataMOTOR_TAIL, PWMNUMVAL);
 

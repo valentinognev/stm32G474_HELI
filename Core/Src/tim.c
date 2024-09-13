@@ -50,6 +50,9 @@ uint32_t riseDatatemp[PWMNUMVAL]={0}, fallDatatemp[PWMNUMVAL]={0};
 uint8_t isMeasuredSERVO_PITCH = 0, isMeasuredSERVO_ROLL = 0, isMeasuredSERVO_3RD = 0;
 uint8_t isMeasuredMOTOR_MAIN = 0, isMeasuredMOTOR_TAIL = 0;
 
+#define TIMERDATA_SIZE 32
+uint32_t timerdata[TIMERDATA_SIZE]={0};
+
 static void TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim, const int pscalar, int *riseCaptured, int *fallCaptured, int *isMeasured,
                             uint32_t *riseData, uint32_t *fallData, float *frequency, float *width);
 /* USER CODE END 0 */
@@ -71,6 +74,8 @@ DMA_HandleTypeDef hdma_tim4_ch1;
 DMA_HandleTypeDef hdma_tim4_ch2;
 DMA_HandleTypeDef hdma_tim5_ch1;
 DMA_HandleTypeDef hdma_tim5_ch2;
+DMA_HandleTypeDef hdma_tim5_up;
+DMA_HandleTypeDef hdma_tim5_trig;
 DMA_HandleTypeDef hdma_tim17_ch1;
 
 /* TIM1 init function */
@@ -320,16 +325,17 @@ void MX_TIM5_Init(void)
   /* USER CODE END TIM5_Init 0 */
 
   TIM_ClockConfigTypeDef sClockSourceConfig = {0};
+  TIM_SlaveConfigTypeDef sSlaveConfig = {0};
   TIM_MasterConfigTypeDef sMasterConfig = {0};
   TIM_IC_InitTypeDef sConfigIC = {0};
 
   /* USER CODE BEGIN TIM5_Init 1 */
-
+ 
   /* USER CODE END TIM5_Init 1 */
   htim5.Instance = TIM5;
-  htim5.Init.Prescaler = PSCALERMOTOR_TAIL;
+  htim5.Init.Prescaler = 17;
   htim5.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim5.Init.Period = 65535;
+  htim5.Init.Period = 4294967295;
   htim5.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   htim5.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_ENABLE;
   if (HAL_TIM_Base_Init(&htim5) != HAL_OK)
@@ -345,7 +351,15 @@ void MX_TIM5_Init(void)
   {
     Error_Handler();
   }
-  sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
+  sSlaveConfig.SlaveMode = TIM_SLAVEMODE_RESET;
+  sSlaveConfig.InputTrigger = TIM_TS_TI1FP1;
+  sSlaveConfig.TriggerPolarity = TIM_INPUTCHANNELPOLARITY_RISING;
+  sSlaveConfig.TriggerFilter = 0;
+  if (HAL_TIM_SlaveConfigSynchro(&htim5, &sSlaveConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sMasterConfig.MasterOutputTrigger = TIM_TRGO_UPDATE;
   sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
   if (HAL_TIMEx_MasterConfigSynchronization(&htim5, &sMasterConfig) != HAL_OK)
   {
@@ -366,7 +380,7 @@ void MX_TIM5_Init(void)
     Error_Handler();
   }
   /* USER CODE BEGIN TIM5_Init 2 */
-
+  
   /* USER CODE END TIM5_Init 2 */
 
 }
@@ -731,7 +745,7 @@ void HAL_TIM_Base_MspInit(TIM_HandleTypeDef* tim_baseHandle)
 
     /* TIM5 DMA Init */
     /* TIM5_CH1 Init */
-    hdma_tim5_ch1.Instance = DMA2_Channel1;
+    hdma_tim5_ch1.Instance = DMA2_Channel2;
     hdma_tim5_ch1.Init.Request = DMA_REQUEST_TIM5_CH1;
     hdma_tim5_ch1.Init.Direction = DMA_PERIPH_TO_MEMORY;
     hdma_tim5_ch1.Init.PeriphInc = DMA_PINC_DISABLE;
@@ -748,7 +762,7 @@ void HAL_TIM_Base_MspInit(TIM_HandleTypeDef* tim_baseHandle)
     __HAL_LINKDMA(tim_baseHandle,hdma[TIM_DMA_ID_CC1],hdma_tim5_ch1);
 
     /* TIM5_CH2 Init */
-    hdma_tim5_ch2.Instance = DMA2_Channel2;
+    hdma_tim5_ch2.Instance = DMA2_Channel1;
     hdma_tim5_ch2.Init.Request = DMA_REQUEST_TIM5_CH2;
     hdma_tim5_ch2.Init.Direction = DMA_PERIPH_TO_MEMORY;
     hdma_tim5_ch2.Init.PeriphInc = DMA_PINC_DISABLE;
@@ -763,6 +777,40 @@ void HAL_TIM_Base_MspInit(TIM_HandleTypeDef* tim_baseHandle)
     }
 
     __HAL_LINKDMA(tim_baseHandle,hdma[TIM_DMA_ID_CC2],hdma_tim5_ch2);
+
+    /* TIM5_UP Init */
+    hdma_tim5_up.Instance = DMA2_Channel7;
+    hdma_tim5_up.Init.Request = DMA_REQUEST_TIM5_UP;
+    hdma_tim5_up.Init.Direction = DMA_PERIPH_TO_MEMORY;
+    hdma_tim5_up.Init.PeriphInc = DMA_PINC_DISABLE;
+    hdma_tim5_up.Init.MemInc = DMA_MINC_ENABLE;
+    hdma_tim5_up.Init.PeriphDataAlignment = DMA_PDATAALIGN_WORD;
+    hdma_tim5_up.Init.MemDataAlignment = DMA_MDATAALIGN_WORD;
+    hdma_tim5_up.Init.Mode = DMA_NORMAL;
+    hdma_tim5_up.Init.Priority = DMA_PRIORITY_LOW;
+    if (HAL_DMA_Init(&hdma_tim5_up) != HAL_OK)
+    {
+      Error_Handler();
+    }
+
+    __HAL_LINKDMA(tim_baseHandle,hdma[TIM_DMA_ID_UPDATE],hdma_tim5_up);
+
+    /* TIM5_TRIG Init */
+    hdma_tim5_trig.Instance = DMA2_Channel8;
+    hdma_tim5_trig.Init.Request = DMA_REQUEST_TIM5_TRIG;
+    hdma_tim5_trig.Init.Direction = DMA_PERIPH_TO_MEMORY;
+    hdma_tim5_trig.Init.PeriphInc = DMA_PINC_DISABLE;
+    hdma_tim5_trig.Init.MemInc = DMA_MINC_ENABLE;
+    hdma_tim5_trig.Init.PeriphDataAlignment = DMA_PDATAALIGN_WORD;
+    hdma_tim5_trig.Init.MemDataAlignment = DMA_MDATAALIGN_WORD;
+    hdma_tim5_trig.Init.Mode = DMA_NORMAL;
+    hdma_tim5_trig.Init.Priority = DMA_PRIORITY_LOW;
+    if (HAL_DMA_Init(&hdma_tim5_trig) != HAL_OK)
+    {
+      Error_Handler();
+    }
+
+    __HAL_LINKDMA(tim_baseHandle,hdma[TIM_DMA_ID_TRIGGER],hdma_tim5_trig);
 
     /* TIM5 interrupt Init */
     HAL_NVIC_SetPriority(TIM5_IRQn, 0, 0);
@@ -952,6 +1000,8 @@ void HAL_TIM_Base_MspDeInit(TIM_HandleTypeDef* tim_baseHandle)
     /* TIM5 DMA DeInit */
     HAL_DMA_DeInit(tim_baseHandle->hdma[TIM_DMA_ID_CC1]);
     HAL_DMA_DeInit(tim_baseHandle->hdma[TIM_DMA_ID_CC2]);
+    HAL_DMA_DeInit(tim_baseHandle->hdma[TIM_DMA_ID_UPDATE]);
+    HAL_DMA_DeInit(tim_baseHandle->hdma[TIM_DMA_ID_TRIGGER]);
 
     /* TIM5 interrupt Deinit */
     HAL_NVIC_DisableIRQ(TIM5_IRQn);
