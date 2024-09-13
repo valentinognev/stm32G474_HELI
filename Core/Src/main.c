@@ -255,23 +255,24 @@ int main(void)
   /*## Start PWM signal generation in DMA mode ############################*/ 
   while (1)
   {
-    // HAL_StatusTypeDef status1 = HAL_TIM_IC_Start_DMA(&htim2, TIM_CHANNEL_1, riseDataSERVO_PITCH, PWMNUMVAL);
-    // HAL_StatusTypeDef status2 = HAL_TIM_IC_Start_DMA(&htim2, TIM_CHANNEL_2, fallDataSERVO_PITCH, PWMNUMVAL);
-    // HAL_StatusTypeDef status3 = HAL_TIM_IC_Start_DMA(&htim2, TIM_CHANNEL_3, riseDataSERVO_ROLL, PWMNUMVAL);
-    // HAL_StatusTypeDef status4 = HAL_TIM_IC_Start_DMA(&htim2, TIM_CHANNEL_4, fallDataSERVO_ROLL, PWMNUMVAL);
-    // HAL_StatusTypeDef status5 = HAL_TIM_IC_Start_DMA(&htim3, TIM_CHANNEL_1, riseDataSERVO_3RD, PWMNUMVAL);
-    // HAL_StatusTypeDef status6 = HAL_TIM_IC_Start_DMA(&htim3, TIM_CHANNEL_2, fallDataSERVO_3RD, PWMNUMVAL);
-    // HAL_StatusTypeDef status7 = HAL_TIM_IC_Start_DMA(&htim4, TIM_CHANNEL_1, riseDataMOTOR_MAIN, PWMNUMVAL);
-    // HAL_StatusTypeDef status8 = HAL_TIM_IC_Start_DMA(&htim4, TIM_CHANNEL_2, fallDataMOTOR_MAIN, PWMNUMVAL);
-    // HAL_StatusTypeDef status9 = HAL_TIM_IC_Start_DMA(&htim4, TIM_CHANNEL_3, riseDataMOTOR_TAIL, PWMNUMVAL);
-    // HAL_StatusTypeDef status10 = HAL_TIM_IC_Start_DMA(&htim4, TIM_CHANNEL_4, fallDataMOTOR_TAIL, PWMNUMVAL);
+    HAL_StatusTypeDef status1 = HAL_TIM_IC_Start_DMA(&htim1, TIM_CHANNEL_1, riseDataSERVO_PITCH, PWMNUMVAL);
+    HAL_StatusTypeDef status2 = HAL_TIM_IC_Start_DMA(&htim1, TIM_CHANNEL_2, fallDataSERVO_PITCH, PWMNUMVAL);
+    HAL_StatusTypeDef status3 = HAL_TIM_IC_Start_DMA(&htim2, TIM_CHANNEL_1, riseDataSERVO_ROLL, PWMNUMVAL);
+    HAL_StatusTypeDef status4 = HAL_TIM_IC_Start_DMA(&htim2, TIM_CHANNEL_2, fallDataSERVO_ROLL, PWMNUMVAL);
+    HAL_StatusTypeDef status5 = HAL_TIM_IC_Start_DMA(&htim3, TIM_CHANNEL_1, riseDataSERVO_3RD, PWMNUMVAL);
+    HAL_StatusTypeDef status6 = HAL_TIM_IC_Start_DMA(&htim3, TIM_CHANNEL_2, fallDataSERVO_3RD, PWMNUMVAL);
+    HAL_StatusTypeDef status7 = HAL_TIM_IC_Start_DMA(&htim4, TIM_CHANNEL_1, riseDataMOTOR_MAIN, PWMNUMVAL);
+    HAL_StatusTypeDef status8 = HAL_TIM_IC_Start_DMA(&htim4, TIM_CHANNEL_2, fallDataMOTOR_MAIN, PWMNUMVAL);
+    HAL_StatusTypeDef status9 = HAL_TIM_IC_Start_DMA(&htim5, TIM_CHANNEL_1, riseDataMOTOR_TAIL, PWMNUMVAL);
+    HAL_StatusTypeDef status10 = HAL_TIM_IC_Start_DMA(&htim5, TIM_CHANNEL_2, fallDataMOTOR_TAIL, PWMNUMVAL);
 
-    if (isMeasuredSERVO_PITCH == 1)
+    if (isMeasuredSERVO_PITCH == 1)    
     {
       if (minFrequency <= frequencySERVO_PITCH && frequencySERVO_PITCH <= maxFrequency)
       {
         servoPitchCommand = widthSERVO_PITCH;
       }
+      isMeasuredSERVO_PITCH = 0;
     }
     if (isMeasuredSERVO_ROLL == 1)
     {
@@ -279,16 +280,10 @@ int main(void)
       {
         servoRollCommand = widthSERVO_ROLL;
       }
-    }
-    if (isMeasuredSERVO_PITCH == 1 && isMeasuredSERVO_ROLL == 1)
-    {
-      TIM2->CNT = 0;
-      isMeasuredSERVO_PITCH = 0;
       isMeasuredSERVO_ROLL = 0;
     }
     if (isMeasuredSERVO_3RD == 1)
     {
-      TIM3->CNT = 0;
       isMeasuredSERVO_3RD = 0;
       if (minFrequency <= frequencySERVO_3RD && frequencySERVO_3RD <= maxFrequency)
       {
@@ -297,12 +292,11 @@ int main(void)
     }
     if (isMeasuredMOTOR_MAIN == 1)
     {
-      TIM4->CNT = 0;
-      isMeasuredMOTOR_MAIN = 0;
       if (minFrequency <= frequencyMOTOR_MAIN && frequencyMOTOR_MAIN <= maxFrequency)
       {
         motorMainCommand = widthMOTOR_MAIN;
       }
+      isMeasuredMOTOR_MAIN == 0;
     }
     if (isMeasuredMOTOR_TAIL == 1)
     {
@@ -310,14 +304,8 @@ int main(void)
       {
         motorTailCommand = widthMOTOR_TAIL;
       }
-    }
-    if (isMeasuredMOTOR_MAIN == 1 && isMeasuredMOTOR_TAIL == 1)
-    {
-      TIM4->CNT = 0;
-      isMeasuredMOTOR_MAIN = 0;
       isMeasuredMOTOR_TAIL = 0;
     }
-
 
     errorFlag[7] = AS5047D_Read(  AS5047_CS_GPIO_Port,   AS5047_CS_Pin, AS5047D_ANGLECOM, &ANGLECOM);
     spiAngle32 = ANGLECOM * 360 / 16384;

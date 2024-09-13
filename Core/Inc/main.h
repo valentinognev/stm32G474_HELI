@@ -71,6 +71,13 @@ void Error_Handler(void);
 /* USER CODE END EFP */
 
 /* Private defines -----------------------------------------------------------*/
+#define PSCALERSERVO_ROLL 100
+#define PSCALERSERVO_PITCH 100
+#define PSCALERSERVO_3RD 100
+#define PSCALERMOTOR_MAIN 100
+#define PSCALERMOTOR_TAIL 100
+#define SERVO_ROLL_Pin GPIO_PIN_0
+#define SERVO_ROLL_GPIO_Port GPIOA
 #define AVGSPEEED_Pin GPIO_PIN_1
 #define AVGSPEEED_GPIO_Port GPIOA
 #define AMPSPEED_Pin GPIO_PIN_2
@@ -79,8 +86,6 @@ void Error_Handler(void);
 #define PHASE_GPIO_Port GPIOA
 #define AS5047_CS_Pin GPIO_PIN_4
 #define AS5047_CS_GPIO_Port GPIOA
-#define SERVO_ROLL_Pin GPIO_PIN_5
-#define SERVO_ROLL_GPIO_Port GPIOA
 #define AS5047_MISO_Pin GPIO_PIN_6
 #define AS5047_MISO_GPIO_Port GPIOA
 #define AS5047_MOSI_Pin GPIO_PIN_7
@@ -101,19 +106,6 @@ void Error_Handler(void);
 #define MOTOR_MAIN_GPIO_Port GPIOB
 
 /* USER CODE BEGIN Private defines */
-#define TIMCLOCK (100000000)
-#define PWM_CHARACTERISTIC_FREQUENCY (400) // Hz PWMNUMVAL
-#undef PSCALARSERVO_ROLL
-#define PSCALARSERVO_ROLL (TIMCLOCK/(PWM_CHARACTERISTIC_FREQUENCY*0xFFFFFFFF/PWMNUMVAL)-1) //(170-1)
-#undef PSCALARSERVO_PITCH
-#define PSCALARSERVO_PITCH (TIMCLOCK/(PWM_CHARACTERISTIC_FREQUENCY*0xFFFFFFFF/PWMNUMVAL)-1)
-#undef PSCALARSERVO_3RD
-#define PSCALARSERVO_3RD (TIMCLOCK/(PWM_CHARACTERISTIC_FREQUENCY*0xFFFF/PWMNUMVAL)-1)
-#undef PSCALARMOTOR_MAIN
-#define PSCALARMOTOR_MAIN (TIMCLOCK/(4000*0xFFFF/PWMNUMVAL)-1) //(170-1)
-#undef PSCALARMOTOR_TAIL
-#define PSCALARMOTOR_TAIL (TIMCLOCK/(2000*0xFFFF/PWMNUMVAL)-1)
-
 #define INTERNAL_TEMPSENSOR_AVGSLOPE   ((int32_t) 2500)        /* Internal temperature sensor, parameter Avg_Slope (unit: uV/DegCelsius). Refer to device datasheet for min/typ/max values. */
 #define INTERNAL_TEMPSENSOR_V25        ((int32_t)  760)        /* Internal temperature sensor, parameter V25 (unit: mV). Refer to device datasheet for min/typ/max values. */
 #define INTERNAL_TEMPSENSOR_V25_TEMP   ((int32_t)   25)
