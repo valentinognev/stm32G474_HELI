@@ -25,29 +25,29 @@
 
 #define TIMCLOCK (170000000)
 #define PWM_CHARACTERISTIC_FREQUENCY (400) // Hz PWMNUMVAL
-#undef PSCALERSERVO_ROLL
-#define PSCALERSERVO_ROLL (TIMCLOCK/(PWM_CHARACTERISTIC_FREQUENCY*0xFFFF/PWMNUMVAL)-1) //(170-1)
-#undef PSCALERSERVO_PITCH
-#define PSCALERSERVO_PITCH (TIMCLOCK/(PWM_CHARACTERISTIC_FREQUENCY*0xFFFF/PWMNUMVAL)-1)
-#undef PSCALERSERVO_3RD
-#define PSCALERSERVO_3RD (TIMCLOCK/(PWM_CHARACTERISTIC_FREQUENCY*0xFFFF/PWMNUMVAL)-1)
+#undef PSCALERSERVO_2
+#define PSCALERSERVO_2 (TIMCLOCK/(PWM_CHARACTERISTIC_FREQUENCY*0xFFFF/PWMNUMVAL)-1) //(170-1)
+#undef PSCALERSERVO_1
+#define PSCALERSERVO_1 (TIMCLOCK/(PWM_CHARACTERISTIC_FREQUENCY*0xFFFF/PWMNUMVAL)-1)
+#undef PSCALERSERVO_3
+#define PSCALERSERVO_3 (TIMCLOCK/(PWM_CHARACTERISTIC_FREQUENCY*0xFFFF/PWMNUMVAL)-1)
 #undef PSCALERMOTOR_MAIN
 #define PSCALERMOTOR_MAIN (TIMCLOCK/(PWM_CHARACTERISTIC_FREQUENCY*0xFFFF/PWMNUMVAL)-1) //(170-1)
 #undef PSCALERMOTOR_TAIL
 #define PSCALERMOTOR_TAIL (TIMCLOCK/(PWM_CHARACTERISTIC_FREQUENCY*0xFFFF/PWMNUMVAL)-1)
 
-int riseSERVO_PITCHCaptured = 0, riseSERVO_ROLLCaptured = 0, riseSERVO_3RDCaptured = 0, riseMOTOR_MAINCaptured = 0, riseMOTOR_TAILCaptured = 0;
-int fallSERVO_PITCHCaptured = 0, fallSERVO_ROLLCaptured = 0, fallSERVO_3RDCaptured = 0, fallMOTOR_MAINCaptured = 0, fallMOTOR_TAILCaptured = 0;
-float frequencySERVO_PITCH = 0, frequencySERVO_ROLL = 0, frequencySERVO_3RD = 0, frequencyMOTOR_MAIN = 0, frequencyMOTOR_TAIL = 0;
-float widthSERVO_PITCH = 0, widthSERVO_ROLL = 0, widthSERVO_3RD = 0, widthMOTOR_MAIN = 0, widthMOTOR_TAIL = 0;
-uint32_t riseDataSERVO_PITCH[PWMNUMVAL]={0}, fallDataSERVO_PITCH[PWMNUMVAL]={0};
-uint32_t riseDataSERVO_ROLL[PWMNUMVAL]={0}, fallDataSERVO_ROLL[PWMNUMVAL]={0};
+int riseSERVO_1Captured = 0, riseSERVO_2Captured = 0, riseSERVO_3Captured = 0, riseMOTOR_MAINCaptured = 0, riseMOTOR_TAILCaptured = 0;
+int fallSERVO_1Captured = 0, fallSERVO_2Captured = 0, fallSERVO_3Captured = 0, fallMOTOR_MAINCaptured = 0, fallMOTOR_TAILCaptured = 0;
+float frequencySERVO_1 = 0, frequencySERVO_2 = 0, frequencySERVO_3 = 0, frequencyMOTOR_MAIN = 0, frequencyMOTOR_TAIL = 0;
+float widthSERVO_1 = 0, widthSERVO_2 = 0, widthSERVO_3 = 0, widthMOTOR_MAIN = 0, widthMOTOR_TAIL = 0;
+uint32_t riseDataSERVO_1[PWMNUMVAL]={0}, fallDataSERVO_1[PWMNUMVAL]={0};
+uint32_t riseDataSERVO_2[PWMNUMVAL]={0}, fallDataSERVO_2[PWMNUMVAL]={0};
 uint32_t riseDataMOTOR_MAIN[PWMNUMVAL]={0}, fallDataMOTOR_MAIN[PWMNUMVAL]={0};
 uint32_t riseDataMOTOR_TAIL[PWMNUMVAL]={0}, fallDataMOTOR_TAIL[PWMNUMVAL]={0};
-uint32_t riseDataSERVO_3RD[PWMNUMVAL]={0}, fallDataSERVO_3RD[PWMNUMVAL]={0};
+uint32_t riseDataSERVO_3[PWMNUMVAL]={0}, fallDataSERVO_3[PWMNUMVAL]={0};
 uint32_t riseDatatemp[PWMNUMVAL]={0}, fallDatatemp[PWMNUMVAL]={0};
 
-uint8_t isMeasuredSERVO_PITCH = 0, isMeasuredSERVO_ROLL = 0, isMeasuredSERVO_3RD = 0;
+uint8_t isMeasuredSERVO_1 = 0, isMeasuredSERVO_2 = 0, isMeasuredSERVO_3 = 0;
 uint8_t isMeasuredMOTOR_MAIN = 0, isMeasuredMOTOR_TAIL = 0;
 
 static void TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim, const int pscalar, int *riseCaptured, int *fallCaptured, int *isMeasured,
@@ -89,7 +89,7 @@ void MX_TIM1_Init(void)
 
   /* USER CODE END TIM1_Init 1 */
   htim1.Instance = TIM1;
-  htim1.Init.Prescaler = PSCALERSERVO_PITCH;
+  htim1.Init.Prescaler = PSCALERSERVO_1;
   htim1.Init.CounterMode = TIM_COUNTERMODE_UP;
   htim1.Init.Period = 65535;
   htim1.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
@@ -150,7 +150,7 @@ void MX_TIM2_Init(void)
 
   /* USER CODE END TIM2_Init 1 */
   htim2.Instance = TIM2;
-  htim2.Init.Prescaler = PSCALERSERVO_ROLL;
+  htim2.Init.Prescaler = PSCALERSERVO_2;
   htim2.Init.CounterMode = TIM_COUNTERMODE_UP;
   htim2.Init.Period = 65535;
   htim2.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
@@ -209,7 +209,7 @@ void MX_TIM3_Init(void)
 
   /* USER CODE END TIM3_Init 1 */
   htim3.Instance = TIM3;
-  htim3.Init.Prescaler = PSCALERSERVO_3RD;
+  htim3.Init.Prescaler = PSCALERSERVO_3;
   htim3.Init.CounterMode = TIM_COUNTERMODE_UP;
   htim3.Init.Period = 65535;
   htim3.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
@@ -478,12 +478,12 @@ void HAL_TIM_Base_MspInit(TIM_HandleTypeDef* tim_baseHandle)
     /**TIM1 GPIO Configuration
     PA8     ------> TIM1_CH1
     */
-    GPIO_InitStruct.Pin = SERVO_PITCH_Pin;
+    GPIO_InitStruct.Pin = SERVO_1_Pin;
     GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
     GPIO_InitStruct.Pull = GPIO_NOPULL;
     GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
     GPIO_InitStruct.Alternate = GPIO_AF6_TIM1;
-    HAL_GPIO_Init(SERVO_PITCH_GPIO_Port, &GPIO_InitStruct);
+    HAL_GPIO_Init(SERVO_1_GPIO_Port, &GPIO_InitStruct);
 
     /* TIM1 DMA Init */
     /* TIM1_CH1 Init */
@@ -539,12 +539,12 @@ void HAL_TIM_Base_MspInit(TIM_HandleTypeDef* tim_baseHandle)
     /**TIM2 GPIO Configuration
     PA0     ------> TIM2_CH1
     */
-    GPIO_InitStruct.Pin = SERVO_ROLL_Pin;
+    GPIO_InitStruct.Pin = SERVO_2_Pin;
     GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
     GPIO_InitStruct.Pull = GPIO_NOPULL;
     GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
     GPIO_InitStruct.Alternate = GPIO_AF1_TIM2;
-    HAL_GPIO_Init(SERVO_ROLL_GPIO_Port, &GPIO_InitStruct);
+    HAL_GPIO_Init(SERVO_2_GPIO_Port, &GPIO_InitStruct);
 
     /* TIM2 DMA Init */
     /* TIM2_CH1 Init */
@@ -600,12 +600,12 @@ void HAL_TIM_Base_MspInit(TIM_HandleTypeDef* tim_baseHandle)
     /**TIM3 GPIO Configuration
     PC6     ------> TIM3_CH1
     */
-    GPIO_InitStruct.Pin = SERVO_3RD_Pin;
+    GPIO_InitStruct.Pin = SERVO_3_Pin;
     GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
     GPIO_InitStruct.Pull = GPIO_NOPULL;
     GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
     GPIO_InitStruct.Alternate = GPIO_AF2_TIM3;
-    HAL_GPIO_Init(SERVO_3RD_GPIO_Port, &GPIO_InitStruct);
+    HAL_GPIO_Init(SERVO_3_GPIO_Port, &GPIO_InitStruct);
 
     /* TIM3 DMA Init */
     /* TIM3_CH1 Init */
@@ -855,7 +855,7 @@ void HAL_TIM_Base_MspDeInit(TIM_HandleTypeDef* tim_baseHandle)
     /**TIM1 GPIO Configuration
     PA8     ------> TIM1_CH1
     */
-    HAL_GPIO_DeInit(SERVO_PITCH_GPIO_Port, SERVO_PITCH_Pin);
+    HAL_GPIO_DeInit(SERVO_1_GPIO_Port, SERVO_1_Pin);
 
     /* TIM1 DMA DeInit */
     HAL_DMA_DeInit(tim_baseHandle->hdma[TIM_DMA_ID_CC1]);
@@ -878,7 +878,7 @@ void HAL_TIM_Base_MspDeInit(TIM_HandleTypeDef* tim_baseHandle)
     /**TIM2 GPIO Configuration
     PA0     ------> TIM2_CH1
     */
-    HAL_GPIO_DeInit(SERVO_ROLL_GPIO_Port, SERVO_ROLL_Pin);
+    HAL_GPIO_DeInit(SERVO_2_GPIO_Port, SERVO_2_Pin);
 
     /* TIM2 DMA DeInit */
     HAL_DMA_DeInit(tim_baseHandle->hdma[TIM_DMA_ID_CC1]);
@@ -901,7 +901,7 @@ void HAL_TIM_Base_MspDeInit(TIM_HandleTypeDef* tim_baseHandle)
     /**TIM3 GPIO Configuration
     PC6     ------> TIM3_CH1
     */
-    HAL_GPIO_DeInit(SERVO_3RD_GPIO_Port, SERVO_3RD_Pin);
+    HAL_GPIO_DeInit(SERVO_3_GPIO_Port, SERVO_3_Pin);
 
     /* TIM3 DMA DeInit */
     HAL_DMA_DeInit(tim_baseHandle->hdma[TIM_DMA_ID_CC1]);
@@ -997,55 +997,55 @@ void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim)
   {
     if (htim->Channel == HAL_TIM_ACTIVE_CHANNEL_1)
     {
-      riseSERVO_PITCHCaptured = 1;
+      riseSERVO_1Captured = 1;
     }
     if (htim->Channel == HAL_TIM_ACTIVE_CHANNEL_2)
     {
-      fallSERVO_PITCHCaptured = 1;
+      fallSERVO_1Captured = 1;
     }
     for (int i=0;i<PWMNUMVAL;i++)
     {
-      riseDatatemp[i]=riseDataSERVO_PITCH[i];
-      fallDatatemp[i]=fallDataSERVO_PITCH[i];
+      riseDatatemp[i]=riseDataSERVO_1[i];
+      fallDatatemp[i]=fallDataSERVO_1[i];
     } 
-    TIM_IC_CaptureCallback(htim, PSCALERSERVO_PITCH, &riseSERVO_PITCHCaptured, &fallSERVO_PITCHCaptured, &isMeasuredSERVO_PITCH,
-                           riseDataSERVO_PITCH, fallDataSERVO_PITCH, &frequencySERVO_PITCH, &widthSERVO_PITCH);
+    TIM_IC_CaptureCallback(htim, PSCALERSERVO_1, &riseSERVO_1Captured, &fallSERVO_1Captured, &isMeasuredSERVO_1,
+                           riseDataSERVO_1, fallDataSERVO_1, &frequencySERVO_1, &widthSERVO_1);
   }
   else if (htim->Instance == TIM2)
   {
     if (htim->Channel == HAL_TIM_ACTIVE_CHANNEL_1)
     {
-      riseSERVO_ROLLCaptured = 1;
+      riseSERVO_2Captured = 1;
     }
     if (htim->Channel == HAL_TIM_ACTIVE_CHANNEL_2)
     {
-      fallSERVO_ROLLCaptured = 1;
+      fallSERVO_2Captured = 1;
     }
     for (int i=0;i<PWMNUMVAL;i++)
     {
-      riseDatatemp[i]=riseDataSERVO_ROLL[i];
-      fallDatatemp[i]=fallDataSERVO_ROLL[i];
+      riseDatatemp[i]=riseDataSERVO_2[i];
+      fallDatatemp[i]=fallDataSERVO_2[i];
     }  
-    TIM_IC_CaptureCallback(htim, PSCALERSERVO_ROLL, &riseSERVO_ROLLCaptured, &fallSERVO_ROLLCaptured, &isMeasuredSERVO_ROLL,
-                           riseDatatemp, fallDatatemp, &frequencySERVO_ROLL, &widthSERVO_ROLL);
+    TIM_IC_CaptureCallback(htim, PSCALERSERVO_2, &riseSERVO_2Captured, &fallSERVO_2Captured, &isMeasuredSERVO_2,
+                           riseDatatemp, fallDatatemp, &frequencySERVO_2, &widthSERVO_2);
   }
   else if (htim->Instance == TIM3)
   {
     if (htim->Channel == HAL_TIM_ACTIVE_CHANNEL_1)
     {
-      riseSERVO_3RDCaptured = 1;
+      riseSERVO_3Captured = 1;
     }
     if (htim->Channel == HAL_TIM_ACTIVE_CHANNEL_2)
     {
-      fallSERVO_3RDCaptured = 1;
+      fallSERVO_3Captured = 1;
     }
     for (int i=0;i<PWMNUMVAL;i++)
     {
-      riseDatatemp[i]=riseDataSERVO_3RD[i];     
-      fallDatatemp[i]=fallDataSERVO_3RD[i];
+      riseDatatemp[i]=riseDataSERVO_3[i];     
+      fallDatatemp[i]=fallDataSERVO_3[i];
     }  
-    TIM_IC_CaptureCallback(htim, PSCALERSERVO_3RD, &riseSERVO_3RDCaptured, &fallSERVO_3RDCaptured, &isMeasuredSERVO_3RD,
-                           riseDatatemp, fallDatatemp, &frequencySERVO_3RD, &widthSERVO_3RD);
+    TIM_IC_CaptureCallback(htim, PSCALERSERVO_3, &riseSERVO_3Captured, &fallSERVO_3Captured, &isMeasuredSERVO_3,
+                           riseDatatemp, fallDatatemp, &frequencySERVO_3, &widthSERVO_3);
   }
   else if (htim->Instance == TIM4)
   {

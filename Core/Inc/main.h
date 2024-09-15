@@ -71,13 +71,13 @@ void Error_Handler(void);
 /* USER CODE END EFP */
 
 /* Private defines -----------------------------------------------------------*/
-#define PSCALERSERVO_ROLL 100
-#define PSCALERSERVO_PITCH 100
-#define PSCALERSERVO_3RD 100
-#define PSCALERMOTOR_MAIN 100
+#define PSCALERSERVO_3 100
+#define PSCALERSERVO_1 100
+#define PSCALERSERVO_2 100
 #define PSCALERMOTOR_TAIL 100
-#define SERVO_ROLL_Pin GPIO_PIN_0
-#define SERVO_ROLL_GPIO_Port GPIOA
+#define PSCALERMOTOR_MAIN 100
+#define SERVO_2_Pin GPIO_PIN_0
+#define SERVO_2_GPIO_Port GPIOA
 #define AVGSPEEED_Pin GPIO_PIN_1
 #define AVGSPEEED_GPIO_Port GPIOA
 #define AMPSPEED_Pin GPIO_PIN_2
@@ -92,10 +92,10 @@ void Error_Handler(void);
 #define AS5047_MOSI_GPIO_Port GPIOA
 #define MOTOR_TAIL_Pin GPIO_PIN_2
 #define MOTOR_TAIL_GPIO_Port GPIOB
-#define SERVO_3RD_Pin GPIO_PIN_6
-#define SERVO_3RD_GPIO_Port GPIOC
-#define SERVO_PITCH_Pin GPIO_PIN_8
-#define SERVO_PITCH_GPIO_Port GPIOA
+#define SERVO_3_Pin GPIO_PIN_6
+#define SERVO_3_GPIO_Port GPIOC
+#define SERVO_1_Pin GPIO_PIN_8
+#define SERVO_1_GPIO_Port GPIOA
 #define AS5047_NSS_Pin GPIO_PIN_15
 #define AS5047_NSS_GPIO_Port GPIOA
 #define AS5047_SCK_Pin GPIO_PIN_3
@@ -111,9 +111,9 @@ void Error_Handler(void);
 #define INTERNAL_TEMPSENSOR_V25_TEMP   ((int32_t)   25)
 #define INTERNAL_TEMPSENSOR_V25_VREF   ((int32_t) 3300)
 
-#define TIMSERVO_PITCH TIM2
-#define TIMSERVO_ROLL  TIM2
-#define TIMSERVO_3RD   TIM3
+#define TIMSERVO_1 TIM2
+#define TIMSERVO_2  TIM2
+#define TIMSERVO_3   TIM3
 #define TIMTAIL_MOTOR  TIM4
 #define TIMMAIN_MOTOR  TIM4
 #define PWMNUMVAL 100

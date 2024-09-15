@@ -57,7 +57,14 @@
 
 /* Private macro -------------------------------------------------------------*/
 /* USER CODE BEGIN PM */
+typedef struct 
+{
+  float x;
+  float y;
+  float z;
+} Point;
 
+typedef Point Vector;
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
@@ -68,7 +75,7 @@
 __IO uint32_t aADCxConvertedData[ADC_CONVERTED_DATA_BUFFER_SIZE]; /* ADC group regular conversion data */
 
 uint16_t my_motor_value[4] = {2345, 0, 0, 0};
-#define sinMAX (560)
+#define sincosMax (560)
 const int32_t sinedata[360] = {0,10,20,29,39,49,59,68,78,88,97,107,116,126,135,145,154,164,173,182,192,201,210,219,228,
 237,245,254,263,271,280,288,297,305,313,321,329,337,345,352,360,367,375,382,389,396,403,410,416,423,429,435,441,447,453,
 459,464,470,475,480,485,490,494,499,503,508,512,515,519,523,526,529,533,536,538,541,543,546,548,550,551,553,555,556,557,
@@ -83,6 +90,23 @@ const int32_t sinedata[360] = {0,10,20,29,39,49,59,68,78,88,97,107,116,126,135,1
 -480,-475,-470,-464,-459,-453,-447,-441,-435,-429,-423,-416,-410,-403,-396,-389,-382,-375,-367,-360,-352,-345,-337,-329,
 -321,-313,-305,-297,-288,-280,-271,-263,-254,-245,-237,-228,-219,-210,-201,-192,-182,-173,-164,-154,-145,-135,-126,-116,
 -107,-97,-88,-78,-68,-59,-49,-39,-29,-20,-10};
+
+const int32_t cosinedata[360] = {560,560,560,560,560,559,559,558,557,556,555,553,551,550,548,546,543,541,538,536,533,529,526,523,
+519,515,512,508,503,499,494,490,485,480,475,470,464,459,453,447,441,435,429,423,416,410,403,396,389,382,375,367,360,352,345,
+337,329,321,313,305,297,288,280,271,263,254,245,237,228,219,210,201,192,182,173,164,154,145,135,126,116,107,97,88,78,68,59,49,
+39,29,20,10,0,-10,-20,-29,-39,-49,-59,-68,-78,-88,-97,-107,-116,-126,-135,-145,-154,-164,-173,-182,-192,-201,-210,-219,-228,
+-237,-245,-254,-263,-271,-280,-288,-297,-305,-313,-321,-329,-337,-345,-352,-360,-367,-375,-382,-389,-396,-403,-410,-416,
+-423,-429,-435,-441,-447,-453,-459,-464,-470,-475,-480,-485,-490,-494,-499,-503,-508,-512,-515,-519,-523,-526,-529,-533,
+-536,-538,-541,-543,-546,-548,-550,-551,-553,-555,-556,-557,-558,-559,-559,-560,-560,-560,-560,-560,-559,-559,-558,-557,
+-556,-555,-553,-551,-550,-548,-546,-543,-541,-538,-536,-533,-529,-526,-523,-519,-515,-512,-508,-503,-499,-494,-490,-485,
+-480,-475,-470,-464,-459,-453,-447,-441,-435,-429,-423,-416,-410,-403,-396,-389,-382,-375,-367,-360,-352,-345,-337,-329,
+-321,-313,-305,-297,-288,-280,-271,-263,-254,-245,-237,-228,-219,-210,-201,-192,-182,-173,-164,-154,-145,-135,-126,-116,
+-107,-97,-88,-78,-68,-59,-49,-39,-29,-20,-10,0,10,20,29,39,49,59,68,78,88,97,107,116,126,135,145,154,164,173,182,192,201,210,
+219,228,237,245,254,263,271,280,288,297,305,313,321,329,337,345,352,360,367,375,382,389,396,403,410,416,423,429,435,441,447,
+453,459,464,470,475,480,485,490,494,499,503,508,512,515,519,523,526,529,533,536,538,541,543,546,548,550,551,553,555,556,557,
+558,559,559,560,560,560,560,560,559,559,558,557,556,555,553,551,550,548,546,543,541,538,536,533,529,526,523,519,515,512,508,
+503,499,494,490,485,480,475,470,464,459,453,447,441,435,429,423,416,410,403,396,389,382,375,367,360,352,345,337,329,321,313,
+305,297,288,280,271,263,254,245,237,228,219,210,201,192,182,173,164,154,145,135,126,116,107,97,88,78,68,59,49,39,29,20,10,0};
 
 DebugCommand debugCommand = 0;
 DebugScope_Handle_t debugData =
@@ -115,27 +139,36 @@ __IO uint32_t PHASE_Voltage = 0;        /* Value of voltage on GPIO pin (on whic
 __IO uint32_t AVGSPEED_Voltage = 0;        /* Value of voltage on GPIO pin (on which is mapped ADC channel) calculated from ADC conversion data (unit: mV) */
 __IO uint32_t AMPSPEED_Voltage = 0;        /* Value of voltage on GPIO pin (on which is mapped ADC channel) calculated from ADC conversion data (unit: mV) */
 
-extern float frequencySERVO_PITCH, frequencySERVO_ROLL, frequencySERVO_3RD, frequencyMOTOR_MAIN, frequencyMOTOR_TAIL;
-extern float widthSERVO_PITCH, widthSERVO_ROLL, widthSERVO_3RD, widthMOTOR_MAIN, widthMOTOR_TAIL;
-extern uint32_t riseDataSERVO_PITCH[PWMNUMVAL], fallDataSERVO_PITCH[PWMNUMVAL];
-extern uint32_t riseDataSERVO_ROLL[PWMNUMVAL], fallDataSERVO_ROLL[PWMNUMVAL];
+extern float frequencySERVO_1, frequencySERVO_2, frequencySERVO_3, frequencyMOTOR_MAIN, frequencyMOTOR_TAIL;
+extern float widthSERVO_1, widthSERVO_2, widthSERVO_3, widthMOTOR_MAIN, widthMOTOR_TAIL;
+extern uint32_t riseDataSERVO_1[PWMNUMVAL], fallDataSERVO_1[PWMNUMVAL];
+extern uint32_t riseDataSERVO_2[PWMNUMVAL], fallDataSERVO_2[PWMNUMVAL];
+extern uint32_t riseDataSERVO_3[PWMNUMVAL], fallDataSERVO_3[PWMNUMVAL];
 extern uint32_t riseDataMOTOR_MAIN[PWMNUMVAL], fallDataMOTOR_MAIN[PWMNUMVAL];
 extern uint32_t riseDataMOTOR_TAIL[PWMNUMVAL], fallDataMOTOR_TAIL[PWMNUMVAL];
-extern uint32_t riseDataSERVO_3RD[PWMNUMVAL], fallDataSERVO_3RD[PWMNUMVAL];
 extern uint32_t riseDatatemp[PWMNUMVAL], fallDatatemp[PWMNUMVAL];
 
 float minFrequency = 100, maxFrequency = 500;
-extern uint8_t isMeasuredSERVO_PITCH, isMeasuredSERVO_ROLL, isMeasuredSERVO_3RD;
+extern uint8_t isMeasuredSERVO_1, isMeasuredSERVO_2, isMeasuredSERVO_3;
 extern uint8_t isMeasuredMOTOR_MAIN, isMeasuredMOTOR_TAIL;
 
+float minSERVO = 0.4, maxSERVO = 0.8;
+float minMOTOR = 0.4, maxMOTOR = 0.8;
+float servoAngle1 = 0, servoAngle2 = 140, servoAngle3 = 220;
+float servoR1 = 1, servoR2 = 1, servoR3 = 1;
+float servo1Nominal = 0.5, servo2Nominal = 0.5, servo3Nominal = 0.5;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
 /* USER CODE BEGIN PFP */
+float cosine(int32_t angle);
+float sine(int32_t angle);
 uint16_t VoltageToAVGSpeed(const uint16_t voltage);
 uint16_t VoltageToAmpSpeed(const uint16_t voltage, const uint16_t curspeed);
 uint16_t VoltageToPhase(const uint16_t voltage);
+void servo2planeABCD(const float servo1, const float servo2, const float servo3, 
+                      float *A, float *B, float *C, float *D);
 
 /* USER CODE END PFP */
 
@@ -160,6 +193,32 @@ int32_t sineData(int32_t angle)
         angle = angle - 360;
     }
     return sinedata[angle];
+}
+
+float sine(int32_t angle)
+{
+    while (angle < 0)
+    {
+        angle = 360 + angle;
+    }
+    while (angle >= 360)
+    {
+        angle = angle - 360;
+    }
+    return (float)sinedata[angle]/(float)sincosMax;
+}
+
+float cosine(int32_t angle)
+{
+    while (angle < 0)
+    {
+        angle = 360 + angle;
+    }
+    while (angle >= 360)
+    {
+        angle = angle - 360;
+    }
+    return (float)cosinedata[angle]/(float)sincosMax;
 }
 /* USER CODE END 0 */
 
@@ -242,11 +301,10 @@ int main(void)
   int32_t phase = 0;
   int32_t spiAngle32 = 0;
   uint16_t totalSpeed = 0;
-  int32_t sinAnglepPhase = 0;
   int32_t delta = 0;
   uint8_t debugRes = 0;
   float data[DEBUGSCOPENUMOFCH] = {0.0f, 0.0f};
-  float servoPitchCommand =0, servoRollCommand = 0, servo3rdCommand = 0;
+  float servo1Command =0, servo2Command = 0, servo3Command = 0;
   float motorMainCommand = 0, motorTailCommand = 0;
   
   DebugScopeStartWrite(&debugData);
@@ -255,57 +313,68 @@ int main(void)
   /*## Start PWM signal generation in DMA mode ############################*/ 
   while (1)
   {
-    HAL_StatusTypeDef status1 = HAL_TIM_IC_Start_DMA(&htim1, TIM_CHANNEL_1, riseDataSERVO_PITCH, PWMNUMVAL);
-    HAL_StatusTypeDef status2 = HAL_TIM_IC_Start_DMA(&htim1, TIM_CHANNEL_2, fallDataSERVO_PITCH, PWMNUMVAL);
-    HAL_StatusTypeDef status3 = HAL_TIM_IC_Start_DMA(&htim2, TIM_CHANNEL_1, riseDataSERVO_ROLL, PWMNUMVAL);
-    HAL_StatusTypeDef status4 = HAL_TIM_IC_Start_DMA(&htim2, TIM_CHANNEL_2, fallDataSERVO_ROLL, PWMNUMVAL);
-    HAL_StatusTypeDef status5 = HAL_TIM_IC_Start_DMA(&htim3, TIM_CHANNEL_1, riseDataSERVO_3RD, PWMNUMVAL);
-    HAL_StatusTypeDef status6 = HAL_TIM_IC_Start_DMA(&htim3, TIM_CHANNEL_2, fallDataSERVO_3RD, PWMNUMVAL);
+    HAL_StatusTypeDef status1 = HAL_TIM_IC_Start_DMA(&htim1, TIM_CHANNEL_1, riseDataSERVO_1, PWMNUMVAL);
+    HAL_StatusTypeDef status2 = HAL_TIM_IC_Start_DMA(&htim1, TIM_CHANNEL_2, fallDataSERVO_1, PWMNUMVAL);
+    HAL_StatusTypeDef status3 = HAL_TIM_IC_Start_DMA(&htim2, TIM_CHANNEL_1, riseDataSERVO_2, PWMNUMVAL);
+    HAL_StatusTypeDef status4 = HAL_TIM_IC_Start_DMA(&htim2, TIM_CHANNEL_2, fallDataSERVO_2, PWMNUMVAL);
+    HAL_StatusTypeDef status5 = HAL_TIM_IC_Start_DMA(&htim3, TIM_CHANNEL_1, riseDataSERVO_3, PWMNUMVAL);
+    HAL_StatusTypeDef status6 = HAL_TIM_IC_Start_DMA(&htim3, TIM_CHANNEL_2, fallDataSERVO_3, PWMNUMVAL);
     HAL_StatusTypeDef status7 = HAL_TIM_IC_Start_DMA(&htim4, TIM_CHANNEL_1, riseDataMOTOR_MAIN, PWMNUMVAL);
     HAL_StatusTypeDef status8 = HAL_TIM_IC_Start_DMA(&htim4, TIM_CHANNEL_2, fallDataMOTOR_MAIN, PWMNUMVAL);
     HAL_StatusTypeDef status9 = HAL_TIM_IC_Start_DMA(&htim5, TIM_CHANNEL_1, riseDataMOTOR_TAIL, PWMNUMVAL);
     HAL_StatusTypeDef status10 = HAL_TIM_IC_Start_DMA(&htim5, TIM_CHANNEL_2, fallDataMOTOR_TAIL, PWMNUMVAL);
 
-    if (isMeasuredSERVO_PITCH == 1)    
+    if (isMeasuredSERVO_1 == 1)    
     {
-      if (minFrequency <= frequencySERVO_PITCH && frequencySERVO_PITCH <= maxFrequency)
-      {
-        servoPitchCommand = widthSERVO_PITCH;
-      }
-      isMeasuredSERVO_PITCH = 0;
+      servo1Command = (widthSERVO_1-minSERVO)/(maxSERVO-minSERVO)-servo1Nominal;
+      isMeasuredSERVO_1 = 0;
     }
-    if (isMeasuredSERVO_ROLL == 1)
+    if (isMeasuredSERVO_2 == 1)
     {
-      if (minFrequency <= frequencySERVO_ROLL && frequencySERVO_ROLL <= maxFrequency)
-      {
-        servoRollCommand = widthSERVO_ROLL;
-      }
-      isMeasuredSERVO_ROLL = 0;
+      servo2Command = (widthSERVO_2-minSERVO)/(maxSERVO-minSERVO)-servo2Nominal;
+      isMeasuredSERVO_2 = 0;
     }
-    if (isMeasuredSERVO_3RD == 1)
+    if (isMeasuredSERVO_3 == 1)
     {
-      isMeasuredSERVO_3RD = 0;
-      if (minFrequency <= frequencySERVO_3RD && frequencySERVO_3RD <= maxFrequency)
-      {
-        servo3rdCommand = widthSERVO_3RD;
-      }
+      isMeasuredSERVO_3 = 0;
+      servo3Command = (widthSERVO_3-minSERVO)/(maxSERVO-minSERVO)-servo3Nominal;
     }
     if (isMeasuredMOTOR_MAIN == 1)
     {
-      if (minFrequency <= frequencyMOTOR_MAIN && frequencyMOTOR_MAIN <= maxFrequency)
-      {
-        motorMainCommand = widthMOTOR_MAIN;
-      }
+      motorMainCommand = (widthMOTOR_MAIN-minMOTOR)/(maxMOTOR-minMOTOR);
+      motorMainCommand = min(motorMainCommand, 1);
+      motorMainCommand = max(motorMainCommand, 0);
       isMeasuredMOTOR_MAIN == 0;
     }
     if (isMeasuredMOTOR_TAIL == 1)
     {
-      if (minFrequency <= frequencyMOTOR_TAIL && frequencyMOTOR_TAIL <= maxFrequency)
-      {
-        motorTailCommand = widthMOTOR_TAIL;
-      }
+      motorTailCommand = (widthMOTOR_TAIL-minMOTOR)/(maxMOTOR-minMOTOR);
+      motorTailCommand = min(motorTailCommand, 1);
+      motorTailCommand = max(motorTailCommand, 0);
       isMeasuredMOTOR_TAIL = 0;
     }
+    float A, B, C, D;
+    servo2planeABCD(servo1Command, servo2Command, servo3Command, &A, &B, &C, &D);
+    float heading = atan2f(B, A);
+    float inclination = acos(C);
+    float collective = -D;
+    
+    if (motorMainCommand < 0.75)
+      continue;
+      
+    avgSpeed = collective*2000;
+    avgSpeed = (avgSpeed>1950)?2000:avgSpeed;
+    avgSpeed = (avgSpeed<50)?0:avgSpeed;
+    if (AVGSPEED_Voltage > 50)
+      avgSpeed = VoltageToAVGSpeed(AVGSPEED_Voltage);
+
+    ampSpeed = inclination*1000;
+    if (AMPSPEED_Voltage > 50)
+      ampSpeed = VoltageToAmpSpeed(AMPSPEED_Voltage, avgSpeed*3/4);
+
+    phase = heading*180/3.14159;
+    if (PHASE_Voltage > 50)
+      phase = VoltageToPhase(PHASE_Voltage);
 
     errorFlag[7] = AS5047D_Read(  AS5047_CS_GPIO_Port,   AS5047_CS_Pin, AS5047D_ANGLECOM, &ANGLECOM);
     spiAngle32 = ANGLECOM * 360 / 16384;
@@ -316,21 +385,7 @@ int main(void)
       continue;
     }
 
-    avgSpeed = VoltageToAVGSpeed(AVGSPEED_Voltage);
-    if (avgSpeed>1950)
-    {
-      avgSpeed = 2000;
-    }
-    if (avgSpeed<50)
-    {
-      avgSpeed = 0;
-    }
-
-    ampSpeed = VoltageToAmpSpeed(AMPSPEED_Voltage, avgSpeed*3/4);
-    phase = VoltageToPhase(PHASE_Voltage);
-
-    sinAnglepPhase = sineData(spiAngle32 + phase);
-    delta = ampSpeed*sinAnglepPhase/sinMAX;
+    delta = ampSpeed*sine(spiAngle32 + phase);
     totalSpeed = avgSpeed + delta;
 
     totalSpeed = min(totalSpeed, 2000);
@@ -427,6 +482,27 @@ void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc)
   AVGSPEED_Voltage     = __HAL_ADC_CALC_DATA_TO_VOLTAGE(VDDA_APPLI, aADCxConvertedData[0], LL_ADC_RESOLUTION_12B);
   AMPSPEED_Voltage     = __HAL_ADC_CALC_DATA_TO_VOLTAGE(VDDA_APPLI, aADCxConvertedData[1], LL_ADC_RESOLUTION_12B);
   PHASE_Voltage        = __HAL_ADC_CALC_DATA_TO_VOLTAGE(VDDA_APPLI, aADCxConvertedData[2], LL_ADC_RESOLUTION_12B);
+}
+
+void servo2planeABCD(const float servo1, const float servo2, const float servo3, 
+                      float *A, float *B, float *C, float *D)
+{
+  Point p1={.x=servoR1*cosine(servoAngle1), .y=servoR1*sine(servoAngle1), .z=servo1};
+  Point p2={.x=servoR2*cosine(servoAngle2), .y=servoR2*sine(servoAngle2), .z=servo2};
+  Point p3={.x=servoR3*cosine(servoAngle3), .y=servoR3*sine(servoAngle3), .z=servo3};
+
+  Vector v1={.x=p2.x-p1.x, .y=p2.y-p1.y, .z=p2.z-p1.z};
+  Vector v2={.x=p3.x-p1.x, .y=p3.y-p1.y, .z=p3.z-p1.z};
+
+  Vector n={.x=v1.y*v2.z-v1.z*v2.y, .y=v1.z*v2.x-v1.x*v2.z, .z=v1.x*v2.y-v1.y*v2.x};
+  float norminv = 1./sqrt(n.x*n.x+n.y*n.y+n.z*n.z);
+  n.x = n.x*norminv;
+  n.y = n.y*norminv;
+  n.z = n.z*norminv;
+  *D = -(n.x*p1.x+n.y*p1.y+n.z*p1.z);
+  *A = n.x;
+  *B = n.y;
+  *C = n.z;
 }
 
 /* USER CODE END 4 */
