@@ -19,6 +19,7 @@
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
 #include "adc.h"
+#include "cordic.h"
 #include "dma.h"
 #include "spi.h"
 #include "tim.h"
@@ -31,6 +32,7 @@
 
 #include "AS5047D.h"
 #include "debug_scope.h"
+#include "mathutils.h"
 #include "dshot.h"
 /* USER CODE END Includes */
 
@@ -57,14 +59,7 @@
 
 /* Private macro -------------------------------------------------------------*/
 /* USER CODE BEGIN PM */
-typedef struct 
-{
-  float x;
-  float y;
-  float z;
-} Point;
 
-typedef Point Vector;
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
@@ -75,38 +70,6 @@ typedef Point Vector;
 __IO uint32_t aADCxConvertedData[ADC_CONVERTED_DATA_BUFFER_SIZE]; /* ADC group regular conversion data */
 
 uint16_t my_motor_value[4] = {2345, 0, 0, 0};
-#define sincosMax (560)
-const int32_t sinedata[360] = {0,10,20,29,39,49,59,68,78,88,97,107,116,126,135,145,154,164,173,182,192,201,210,219,228,
-237,245,254,263,271,280,288,297,305,313,321,329,337,345,352,360,367,375,382,389,396,403,410,416,423,429,435,441,447,453,
-459,464,470,475,480,485,490,494,499,503,508,512,515,519,523,526,529,533,536,538,541,543,546,548,550,551,553,555,556,557,
-558,559,559,560,560,560,560,560,559,559,558,557,556,555,553,551,550,548,546,543,541,538,536,533,529,526,523,519,515,512,
-508,503,499,494,490,485,480,475,470,464,459,453,447,441,435,429,423,416,410,403,396,389,382,375,367,360,352,345,337,329,
-321,313,305,297,288,280,271,263,254,245,237,228,219,210,201,192,182,173,164,154,145,135,126,116,107,97,88,78,68,59,49,39,
-29,20,10,0,-10,-20,-29,-39,-49,-59,-68,-78,-88,-97,-107,-116,-126,-135,-145,-154,-164,-173,-182,-192,-201,-210,-219,-228,
--237,-245,-254,-263,-271,-280,-288,-297,-305,-313,-321,-329,-337,-345,-352,-360,-367,-375,-382,-389,-396,-403,-410,-416,
--423,-429,-435,-441,-447,-453,-459,-464,-470,-475,-480,-485,-490,-494,-499,-503,-508,-512,-515,-519,-523,-526,-529,-533,
--536,-538,-541,-543,-546,-548,-550,-551,-553,-555,-556,-557,-558,-559,-559,-560,-560,-560,-560,-560,-559,-559,-558,-557,
--556,-555,-553,-551,-550,-548,-546,-543,-541,-538,-536,-533,-529,-526,-523,-519,-515,-512,-508,-503,-499,-494,-490,-485,
--480,-475,-470,-464,-459,-453,-447,-441,-435,-429,-423,-416,-410,-403,-396,-389,-382,-375,-367,-360,-352,-345,-337,-329,
--321,-313,-305,-297,-288,-280,-271,-263,-254,-245,-237,-228,-219,-210,-201,-192,-182,-173,-164,-154,-145,-135,-126,-116,
--107,-97,-88,-78,-68,-59,-49,-39,-29,-20,-10};
-
-const int32_t cosinedata[360] = {560,560,560,560,560,559,559,558,557,556,555,553,551,550,548,546,543,541,538,536,533,529,526,523,
-519,515,512,508,503,499,494,490,485,480,475,470,464,459,453,447,441,435,429,423,416,410,403,396,389,382,375,367,360,352,345,
-337,329,321,313,305,297,288,280,271,263,254,245,237,228,219,210,201,192,182,173,164,154,145,135,126,116,107,97,88,78,68,59,49,
-39,29,20,10,0,-10,-20,-29,-39,-49,-59,-68,-78,-88,-97,-107,-116,-126,-135,-145,-154,-164,-173,-182,-192,-201,-210,-219,-228,
--237,-245,-254,-263,-271,-280,-288,-297,-305,-313,-321,-329,-337,-345,-352,-360,-367,-375,-382,-389,-396,-403,-410,-416,
--423,-429,-435,-441,-447,-453,-459,-464,-470,-475,-480,-485,-490,-494,-499,-503,-508,-512,-515,-519,-523,-526,-529,-533,
--536,-538,-541,-543,-546,-548,-550,-551,-553,-555,-556,-557,-558,-559,-559,-560,-560,-560,-560,-560,-559,-559,-558,-557,
--556,-555,-553,-551,-550,-548,-546,-543,-541,-538,-536,-533,-529,-526,-523,-519,-515,-512,-508,-503,-499,-494,-490,-485,
--480,-475,-470,-464,-459,-453,-447,-441,-435,-429,-423,-416,-410,-403,-396,-389,-382,-375,-367,-360,-352,-345,-337,-329,
--321,-313,-305,-297,-288,-280,-271,-263,-254,-245,-237,-228,-219,-210,-201,-192,-182,-173,-164,-154,-145,-135,-126,-116,
--107,-97,-88,-78,-68,-59,-49,-39,-29,-20,-10,0,10,20,29,39,49,59,68,78,88,97,107,116,126,135,145,154,164,173,182,192,201,210,
-219,228,237,245,254,263,271,280,288,297,305,313,321,329,337,345,352,360,367,375,382,389,396,403,410,416,423,429,435,441,447,
-453,459,464,470,475,480,485,490,494,499,503,508,512,515,519,523,526,529,533,536,538,541,543,546,548,550,551,553,555,556,557,
-558,559,559,560,560,560,560,560,559,559,558,557,556,555,553,551,550,548,546,543,541,538,536,533,529,526,523,519,515,512,508,
-503,499,494,490,485,480,475,470,464,459,453,447,441,435,429,423,416,410,403,396,389,382,375,367,360,352,345,337,329,321,313,
-305,297,288,280,271,263,254,245,237,228,219,210,201,192,182,173,164,154,145,135,126,116,107,97,88,78,68,59,49,39,29,20,10,0};
 
 DebugCommand debugCommand = 0;
 DebugScope_Handle_t debugData =
@@ -154,16 +117,16 @@ extern uint8_t isMeasuredMOTOR_MAIN, isMeasuredMOTOR_TAIL;
 
 float minSERVO = 0.4, maxSERVO = 0.8;
 float minMOTOR = 0.4, maxMOTOR = 0.8;
-float servoAngle1 = 0, servoAngle2 = 140, servoAngle3 = 220;
+float servoAngle1 = 0.f/180.f*PI, servoAngle2 = 140.f/180.f*PI, servoAngle3 = 220.f/180.f*PI;
 float servoR1 = 1, servoR2 = 1, servoR3 = 1;
 float servo1Nominal = 0.5, servo2Nominal = 0.5, servo3Nominal = 0.5;
+static float sinS[4]={0,0,0,0};
+static float cosS[4]={0,0,0,0};
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
 /* USER CODE BEGIN PFP */
-float cosine(int32_t angle);
-float sine(int32_t angle);
 uint16_t VoltageToAVGSpeed(const uint16_t voltage);
 uint16_t VoltageToAmpSpeed(const uint16_t voltage, const uint16_t curspeed);
 uint16_t VoltageToPhase(const uint16_t voltage);
@@ -182,44 +145,7 @@ void DelayUS(uint32_t us)
     }
 }
 
-int32_t sineData(int32_t angle)
-{
-    while (angle < 0)
-    {
-        angle = 360 + angle;
-    }
-    while (angle >= 360)
-    {
-        angle = angle - 360;
-    }
-    return sinedata[angle];
-}
 
-float sine(int32_t angle)
-{
-    while (angle < 0)
-    {
-        angle = 360 + angle;
-    }
-    while (angle >= 360)
-    {
-        angle = angle - 360;
-    }
-    return (float)sinedata[angle]/(float)sincosMax;
-}
-
-float cosine(int32_t angle)
-{
-    while (angle < 0)
-    {
-        angle = 360 + angle;
-    }
-    while (angle >= 360)
-    {
-        angle = angle - 360;
-    }
-    return (float)cosinedata[angle]/(float)sincosMax;
-}
 /* USER CODE END 0 */
 
 /**
@@ -230,7 +156,8 @@ int main(void)
 {
 
   /* USER CODE BEGIN 1 */
-
+  cosS[1] = cosf(servoAngle1); cosS[2] = cosf(servoAngle2); cosS[3] = cosf(servoAngle3);
+  sinS[1] = sinf(servoAngle1); sinS[2] = sinf(servoAngle2); sinS[3] = sinf(servoAngle3);
   /* USER CODE END 1 */
 
   /* MCU Configuration--------------------------------------------------------*/
@@ -262,6 +189,7 @@ int main(void)
   MX_TIM17_Init();
   MX_USB_Device_Init();
   MX_ADC1_Init();
+  MX_CORDIC_Init();
   /* USER CODE BEGIN 2 */
    /* Initiaize AS5047D */
   uint16_t nop,AGC;
@@ -295,6 +223,7 @@ int main(void)
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
+
 
   int32_t avgSpeed = 0;
   int32_t ampSpeed = 0;
@@ -355,12 +284,20 @@ int main(void)
     }
     float A, B, C, D;
     servo2planeABCD(servo1Command, servo2Command, servo3Command, &A, &B, &C, &D);
-    float heading = atan2f(B, A);
-    float inclination = acos(C);
+    //float heading = atan2f(B, A);
+    float heading = atan2_m(B, A);
+    //float inclination = acos(C);
+    float inclination = acos_nvidia(C);
     float collective = -D;
     
-    if (motorMainCommand < 0.75)
+    //if (motorMainCommand < 0.75)
+    if (collective < 0)
+    {
+      totalSpeed = 0;
+      dshot_send(&totalSpeed);
+      HAL_Delay(1);
       continue;
+    }
       
     avgSpeed = collective*2000;
     avgSpeed = (avgSpeed>1950)?2000:avgSpeed;
@@ -385,7 +322,7 @@ int main(void)
       continue;
     }
 
-    delta = ampSpeed*sine(spiAngle32 + phase);
+    delta = ampSpeed*sine_m(spiAngle32 + phase);
     totalSpeed = avgSpeed + delta;
 
     totalSpeed = min(totalSpeed, 2000);
@@ -487,9 +424,9 @@ void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc)
 void servo2planeABCD(const float servo1, const float servo2, const float servo3, 
                       float *A, float *B, float *C, float *D)
 {
-  Point p1={.x=servoR1*cosine(servoAngle1), .y=servoR1*sine(servoAngle1), .z=servo1};
-  Point p2={.x=servoR2*cosine(servoAngle2), .y=servoR2*sine(servoAngle2), .z=servo2};
-  Point p3={.x=servoR3*cosine(servoAngle3), .y=servoR3*sine(servoAngle3), .z=servo3};
+  Point p1={.x=servoR1*cosS[1], .y=servoR1*sinS[1], .z=servo1};
+  Point p2={.x=servoR2*cosS[2], .y=servoR2*sinS[2], .z=servo2};
+  Point p3={.x=servoR3*cosS[3], .y=servoR3*sinS[3], .z=servo3};
 
   Vector v1={.x=p2.x-p1.x, .y=p2.y-p1.y, .z=p2.z-p1.z};
   Vector v2={.x=p3.x-p1.x, .y=p3.y-p1.y, .z=p3.z-p1.z};

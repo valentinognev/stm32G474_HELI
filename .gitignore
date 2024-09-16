@@ -154,3 +154,9 @@ build/CMakeFiles/stm32G474_HELI.dir/Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_h
 build/CMakeFiles/stm32G474_HELI.dir/Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_adc_ex.c.obj.d
 build/CMakeFiles/stm32G474_HELI.dir/Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_adc.c.obj
 build/CMakeFiles/stm32G474_HELI.dir/Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_adc.c.obj.d
+build/CMakeFiles/stm32G474_HELI.dir/Core/Src/cordic.c.obj
+build/CMakeFiles/stm32G474_HELI.dir/Core/Src/cordic.c.obj.d
+build/CMakeFiles/stm32G474_HELI.dir/Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_cordic.c.obj
+build/CMakeFiles/stm32G474_HELI.dir/Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_cordic.c.obj.d
+build/CMakeFiles/stm32G474_HELI.dir/Project/Src/mathutils.c.obj
+build/CMakeFiles/stm32G474_HELI.dir/Project/Src/mathutils.c.obj.d
