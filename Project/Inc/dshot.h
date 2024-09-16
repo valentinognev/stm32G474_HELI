@@ -26,7 +26,7 @@
 #define TIMER_CLOCK				170000000	// 170MHz
 
 // MOTOR 1 (PA3) - TIM1 Channel 1, DMA2 Stream 1
-#define MOTOR1_TIM             (htim17)
+#define MOTOR1_TIM             (htim15)
 #define MOTOR_1_TIM_CHANNEL     TIM_CHANNEL_1
 
 // MOTOR 2 (PA2) - TIM2 Channel 3, DMA1 Stream 1

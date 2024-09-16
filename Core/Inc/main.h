@@ -94,14 +94,14 @@ void Error_Handler(void);
 #define AS5047_MOSI_GPIO_Port GPIOA
 #define MOTOR_TAIL_Pin GPIO_PIN_2
 #define MOTOR_TAIL_GPIO_Port GPIOB
+#define DSHOT_Pin GPIO_PIN_14
+#define DSHOT_GPIO_Port GPIOB
 #define SERVO_3_Pin GPIO_PIN_6
 #define SERVO_3_GPIO_Port GPIOC
 #define SERVO_1_Pin GPIO_PIN_8
 #define SERVO_1_GPIO_Port GPIOA
 #define AS5047_NSS_Pin GPIO_PIN_15
 #define AS5047_NSS_GPIO_Port GPIOA
-#define DSHOT_Pin GPIO_PIN_5
-#define DSHOT_GPIO_Port GPIOB
 #define MOTOR_MAIN_Pin GPIO_PIN_6
 #define MOTOR_MAIN_GPIO_Port GPIOB
 

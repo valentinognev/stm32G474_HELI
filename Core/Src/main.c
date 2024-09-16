@@ -186,10 +186,10 @@ int main(void)
   MX_TIM4_Init();
   MX_TIM5_Init();
   MX_TIM6_Init();
-  MX_TIM17_Init();
   MX_USB_Device_Init();
   MX_ADC1_Init();
   MX_CORDIC_Init();
+  MX_TIM15_Init();
   /* USER CODE BEGIN 2 */
    /* Initiaize AS5047D */
   uint16_t nop,AGC;
@@ -299,15 +299,21 @@ int main(void)
       continue;
     }
       
-    avgSpeed = collective*2000;
+    avgSpeed = collective/0.22f*2000;
     avgSpeed = (avgSpeed>1950)?2000:avgSpeed;
     avgSpeed = (avgSpeed<50)?0:avgSpeed;
     if (AVGSPEED_Voltage > 50)
       avgSpeed = VoltageToAVGSpeed(AVGSPEED_Voltage);
 
-    ampSpeed = inclination*1000;
+    ampSpeed = inclination/0.16f*100-23;//
+    ampSpeed = (ampSpeed > 80)?100:ampSpeed;
+    ampSpeed = (ampSpeed < 5)?0:ampSpeed;
+    ampSpeed *= (avgSpeed*3/4)/100;
+    // avgSpeed = (avgSpeed<50)?0:avgSpeed;
+
     if (AMPSPEED_Voltage > 50)
       ampSpeed = VoltageToAmpSpeed(AMPSPEED_Voltage, avgSpeed*3/4);
+    
 
     phase = heading*180/3.14159;
     if (PHASE_Voltage > 50)
