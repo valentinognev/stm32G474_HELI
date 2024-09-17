@@ -115,11 +115,11 @@ float minFrequency = 100, maxFrequency = 500;
 extern uint8_t isMeasuredSERVO_1, isMeasuredSERVO_2, isMeasuredSERVO_3;
 extern uint8_t isMeasuredMOTOR_MAIN, isMeasuredMOTOR_TAIL;
 
-float minSERVO = 0.4, maxSERVO = 0.8;
-float minMOTOR = 0.4, maxMOTOR = 0.8;
-float servoAngle1 = 0.f/180.f*PI, servoAngle2 = 140.f/180.f*PI, servoAngle3 = 220.f/180.f*PI;
+float minSERVO = 0.32187, maxSERVO = 0.88;
+float minMOTOR = 0.4, maxMOTOR = 0.88;
+float servoAngle1 = 0.f/180.f*PI, servoAngle2 = 120.f/180.f*PI, servoAngle3 = 240.f/180.f*PI;
 float servoR1 = 1, servoR2 = 1, servoR3 = 1;
-float servo1Nominal = 0.5, servo2Nominal = 0.5, servo3Nominal = 0.5;
+float servo1Nominal = 0.47652, servo2Nominal = 0.47931, servo3Nominal = 0.47848;
 static float sinS[4]={0,0,0,0};
 static float cosS[4]={0,0,0,0};
 /* USER CODE END PV */
@@ -237,7 +237,7 @@ int main(void)
   float motorMainCommand = 0, motorTailCommand = 0;
   
   DebugScopeStartWrite(&debugData);
-  HAL_ADC_Start_DMA(&hadc1, aADCxConvertedData, ADC_CONVERTED_DATA_BUFFER_SIZE);
+  // HAL_ADC_Start_DMA(&hadc1, aADCxConvertedData, ADC_CONVERTED_DATA_BUFFER_SIZE);
   HAL_TIM_Base_Start(&htim6);
   /*## Start PWM signal generation in DMA mode ############################*/ 
   while (1)
@@ -255,18 +255,18 @@ int main(void)
 
     if (isMeasuredSERVO_1 == 1)    
     {
-      servo1Command = (widthSERVO_1-minSERVO)/(maxSERVO-minSERVO)-servo1Nominal;
+      servo1Command = (widthSERVO_1-minSERVO)/(maxSERVO-minSERVO);//-servo1Nominal;
       isMeasuredSERVO_1 = 0;
     }
     if (isMeasuredSERVO_2 == 1)
     {
-      servo2Command = (widthSERVO_2-minSERVO)/(maxSERVO-minSERVO)-servo2Nominal;
+      servo2Command = (widthSERVO_2-minSERVO)/(maxSERVO-minSERVO);//-servo2Nominal;
       isMeasuredSERVO_2 = 0;
     }
     if (isMeasuredSERVO_3 == 1)
     {
       isMeasuredSERVO_3 = 0;
-      servo3Command = (widthSERVO_3-minSERVO)/(maxSERVO-minSERVO)-servo3Nominal;
+      servo3Command = (widthSERVO_3-minSERVO)/(maxSERVO-minSERVO);//-servo3Nominal;
     }
     if (isMeasuredMOTOR_MAIN == 1)
     {
@@ -290,8 +290,7 @@ int main(void)
     float inclination = acos_nvidia(C);
     float collective = -D;
     
-    //if (motorMainCommand < 0.75)
-    if (collective < 0)
+    if (motorMainCommand < 0.5)
     {
       totalSpeed = 0;
       dshot_send(&totalSpeed);
@@ -299,25 +298,24 @@ int main(void)
       continue;
     }
       
-    avgSpeed = collective/0.22f*2000;
+    avgSpeed = (collective-0.5)/(0.72-0.5)*2000;
     avgSpeed = (avgSpeed>1950)?2000:avgSpeed;
     avgSpeed = (avgSpeed<50)?0:avgSpeed;
-    if (AVGSPEED_Voltage > 50)
-      avgSpeed = VoltageToAVGSpeed(AVGSPEED_Voltage);
+    // if (AVGSPEED_Voltage > 50)
+    //   avgSpeed = VoltageToAVGSpeed(AVGSPEED_Voltage);
 
-    ampSpeed = inclination/0.16f*100-23;//
+    ampSpeed = inclination/0.40f*100;//
     ampSpeed = (ampSpeed > 80)?100:ampSpeed;
     ampSpeed = (ampSpeed < 5)?0:ampSpeed;
-    ampSpeed *= (avgSpeed*3/4)/100;
+    ampSpeed = ampSpeed*avgSpeed*1/4/100;
     // avgSpeed = (avgSpeed<50)?0:avgSpeed;
 
-    if (AMPSPEED_Voltage > 50)
-      ampSpeed = VoltageToAmpSpeed(AMPSPEED_Voltage, avgSpeed*3/4);
+    // if (AMPSPEED_Voltage > 50)
+    //   ampSpeed = VoltageToAmpSpeed(AMPSPEED_Voltage, avgSpeed*3/4);
     
-
     phase = heading*180/3.14159;
-    if (PHASE_Voltage > 50)
-      phase = VoltageToPhase(PHASE_Voltage);
+    // if (PHASE_Voltage > 50)
+    //   phase = VoltageToPhase(PHASE_Voltage);
 
     errorFlag[7] = AS5047D_Read(  AS5047_CS_GPIO_Port,   AS5047_CS_Pin, AS5047D_ANGLECOM, &ANGLECOM);
     spiAngle32 = ANGLECOM * 360 / 16384;
