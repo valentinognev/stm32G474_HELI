@@ -19,15 +19,15 @@ message("Build type: ${CMAKE_BUILD_TYPE}")
 
 # Set microcontroller information
 set(MCU_FAMILY STM32G4xx)
-set(MCU_MODEL STM32G474xx)
+set(MCU_MODEL STM32G431xx)
 set(CPU_PARAMETERS
     -mcpu=cortex-m4
     -mthumb
     -mfpu=fpv4-sp-d16
     -mfloat-abi=hard)
 
-set(STARTUP_SCRIPT ${CMAKE_CURRENT_SOURCE_DIR}/startup_stm32g474xx.s)
-set(MCU_LINKER_SCRIPT ${CMAKE_CURRENT_SOURCE_DIR}/STM32G474CEUx_FLASH.ld)
+set(STARTUP_SCRIPT ${CMAKE_CURRENT_SOURCE_DIR}/startup_stm32g431cbux.s)
+set(MCU_LINKER_SCRIPT ${CMAKE_CURRENT_SOURCE_DIR}/STM32G431CBUX_FLASH.ld)
 
 ###############################################################################
 set(EXECUTABLE ${CMAKE_PROJECT_NAME})

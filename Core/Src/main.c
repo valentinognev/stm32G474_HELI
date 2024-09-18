@@ -18,12 +18,11 @@
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
-#include "adc.h"
 #include "cordic.h"
 #include "dma.h"
 #include "spi.h"
 #include "tim.h"
-#include "usb_device.h"
+#include "usb.h"
 #include "gpio.h"
 
 /* Private includes ----------------------------------------------------------*/
@@ -179,17 +178,15 @@ int main(void)
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
   MX_DMA_Init();
-  MX_SPI1_Init();
   MX_TIM1_Init();
   MX_TIM2_Init();
   MX_TIM3_Init();
   MX_TIM4_Init();
-  MX_TIM5_Init();
-  MX_TIM6_Init();
-  MX_USB_Device_Init();
-  MX_ADC1_Init();
-  MX_CORDIC_Init();
   MX_TIM15_Init();
+  MX_TIM6_Init();
+  MX_SPI1_Init();
+  MX_USB_PCD_Init();
+  MX_CORDIC_Init();
   /* USER CODE BEGIN 2 */
    /* Initiaize AS5047D */
   uint16_t nop,AGC;
@@ -250,8 +247,8 @@ int main(void)
     HAL_StatusTypeDef status6 = HAL_TIM_IC_Start_DMA(&htim3, TIM_CHANNEL_2, fallDataSERVO_3, PWMNUMVAL);
     HAL_StatusTypeDef status7 = HAL_TIM_IC_Start_DMA(&htim4, TIM_CHANNEL_1, riseDataMOTOR_MAIN, PWMNUMVAL);
     HAL_StatusTypeDef status8 = HAL_TIM_IC_Start_DMA(&htim4, TIM_CHANNEL_2, fallDataMOTOR_MAIN, PWMNUMVAL);
-    HAL_StatusTypeDef status9 = HAL_TIM_IC_Start_DMA(&htim5, TIM_CHANNEL_1, riseDataMOTOR_TAIL, PWMNUMVAL);
-    HAL_StatusTypeDef status10 = HAL_TIM_IC_Start_DMA(&htim5, TIM_CHANNEL_2, fallDataMOTOR_TAIL, PWMNUMVAL);
+    // HAL_StatusTypeDef status9 = HAL_TIM_IC_Start_DMA(&htim5, TIM_CHANNEL_1, riseDataMOTOR_TAIL, PWMNUMVAL);
+    // HAL_StatusTypeDef status10 = HAL_TIM_IC_Start_DMA(&htim5, TIM_CHANNEL_2, fallDataMOTOR_TAIL, PWMNUMVAL);
 
     if (isMeasuredSERVO_1 == 1)    
     {
@@ -275,13 +272,13 @@ int main(void)
       motorMainCommand = max(motorMainCommand, 0);
       isMeasuredMOTOR_MAIN == 0;
     }
-    if (isMeasuredMOTOR_TAIL == 1)
-    {
-      motorTailCommand = (widthMOTOR_TAIL-minMOTOR)/(maxMOTOR-minMOTOR);
-      motorTailCommand = min(motorTailCommand, 1);
-      motorTailCommand = max(motorTailCommand, 0);
-      isMeasuredMOTOR_TAIL = 0;
-    }
+    // if (isMeasuredMOTOR_TAIL == 1)
+    // {
+    //   motorTailCommand = (widthMOTOR_TAIL-minMOTOR)/(maxMOTOR-minMOTOR);
+    //   motorTailCommand = min(motorTailCommand, 1);
+    //   motorTailCommand = max(motorTailCommand, 0);
+    //   isMeasuredMOTOR_TAIL = 0;
+    // }
     float A, B, C, D;
     servo2planeABCD(servo1Command, servo2Command, servo3Command, &A, &B, &C, &D);
     //float heading = atan2f(B, A);
@@ -366,15 +363,16 @@ void SystemClock_Config(void)
   /** Initializes the RCC Oscillators according to the specified parameters
   * in the RCC_OscInitTypeDef structure.
   */
-  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSI48|RCC_OSCILLATORTYPE_HSE;
-  RCC_OscInitStruct.HSEState = RCC_HSE_ON;
+  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSI|RCC_OSCILLATORTYPE_HSI48;
+  RCC_OscInitStruct.HSIState = RCC_HSI_ON;
+  RCC_OscInitStruct.HSICalibrationValue = RCC_HSICALIBRATION_DEFAULT;
   RCC_OscInitStruct.HSI48State = RCC_HSI48_ON;
   RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
-  RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSE;
-  RCC_OscInitStruct.PLL.PLLM = RCC_PLLM_DIV2;
+  RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSI;
+  RCC_OscInitStruct.PLL.PLLM = RCC_PLLM_DIV4;
   RCC_OscInitStruct.PLL.PLLN = 85;
   RCC_OscInitStruct.PLL.PLLP = RCC_PLLP_DIV2;
-  RCC_OscInitStruct.PLL.PLLQ = RCC_PLLQ_DIV2;
+  RCC_OscInitStruct.PLL.PLLQ = RCC_PLLQ_DIV4;
   RCC_OscInitStruct.PLL.PLLR = RCC_PLLR_DIV2;
   if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)
   {
@@ -410,19 +408,6 @@ uint16_t VoltageToAmpSpeed(const uint16_t voltage, const uint16_t curspeed)
 uint16_t VoltageToPhase(const uint16_t voltage)
 {
   return (uint16_t)((uint32_t)(voltage - MINVOLTAGE)* 360 /(MAXVOLTAGE - MINVOLTAGE)) ;
-}
-
-void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc)
-{
-    // Conversion Complete & DMA Transfer Complete As Well
-    // So The AD_RES_BUFFER Is Now Updated & Let's Move Values To The PWM CCRx
-    // Update The PWM Channels With Latest ADC Scan Conversion Results
-    // PHASE_Voltage = aADCxConvertedData[0];  // ADC CH6 -> PWM CH1
-    // AVGSPEED_Voltage = aADCxConvertedData[1];  // ADC CH7 -> PWM CH2
-    // AMPSPEED_Voltage = aADCxConvertedData[2];  // ADC CH8 -> PWM CH3
-  AVGSPEED_Voltage     = __HAL_ADC_CALC_DATA_TO_VOLTAGE(VDDA_APPLI, aADCxConvertedData[0], LL_ADC_RESOLUTION_12B);
-  AMPSPEED_Voltage     = __HAL_ADC_CALC_DATA_TO_VOLTAGE(VDDA_APPLI, aADCxConvertedData[1], LL_ADC_RESOLUTION_12B);
-  PHASE_Voltage        = __HAL_ADC_CALC_DATA_TO_VOLTAGE(VDDA_APPLI, aADCxConvertedData[2], LL_ADC_RESOLUTION_12B);
 }
 
 void servo2planeABCD(const float servo1, const float servo2, const float servo3, 

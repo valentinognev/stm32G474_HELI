@@ -31,7 +31,7 @@ extern "C" {
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-#include "stm32g474xx.h"
+#include "stm32g431xx.h"
 #include "stm32g4xx_ll_tim.h"
 #include "stm32g4xx_ll_bus.h"
 #include "stm32g4xx_ll_cortex.h"
@@ -44,7 +44,6 @@ extern "C" {
 
 #include "stm32g4xx_ll_exti.h"
 #include "stm32g4xx_ll_spi.h"
-#include "stm32g4xx_ll_adc.h"
 #include "stm32g4xx_ll_tim.h"
 /* USER CODE END Includes */
 
@@ -71,19 +70,12 @@ void Error_Handler(void);
 /* USER CODE END EFP */
 
 /* Private defines -----------------------------------------------------------*/
-#define PSCALERSERVO_3 100
 #define PSCALERSERVO_1 100
 #define PSCALERSERVO_2 100
-#define PSCALERMOTOR_TAIL 100
+#define PSCALERSERVO_3 100
 #define PSCALERMOTOR_MAIN 100
 #define SERVO_2_Pin GPIO_PIN_0
 #define SERVO_2_GPIO_Port GPIOA
-#define AVGSPEEED_Pin GPIO_PIN_1
-#define AVGSPEEED_GPIO_Port GPIOA
-#define AMPSPEED_Pin GPIO_PIN_2
-#define AMPSPEED_GPIO_Port GPIOA
-#define PHASE_Pin GPIO_PIN_3
-#define PHASE_GPIO_Port GPIOA
 #define AS5047_CS_Pin GPIO_PIN_4
 #define AS5047_CS_GPIO_Port GPIOA
 #define AS5047_SCK_Pin GPIO_PIN_5
@@ -92,8 +84,6 @@ void Error_Handler(void);
 #define AS5047_MISO_GPIO_Port GPIOA
 #define AS5047_MOSI_Pin GPIO_PIN_7
 #define AS5047_MOSI_GPIO_Port GPIOA
-#define MOTOR_TAIL_Pin GPIO_PIN_2
-#define MOTOR_TAIL_GPIO_Port GPIOB
 #define DSHOT_Pin GPIO_PIN_14
 #define DSHOT_GPIO_Port GPIOB
 #define SERVO_3_Pin GPIO_PIN_6

@@ -38,7 +38,7 @@ DebugWriteState DebugScopeInsertData(DebugScope_Handle_t *pHandle, const float d
         pHandle->startWriteFlag = false;
         return NO_MORE_PLACE_TO_WRITE; 
     }
-	pHandle->timeus[pHandle->id] = TIM5->CNT;
+	pHandle->timeus[pHandle->id] = TIM6->CNT;
 #if DEBUGSCOPENUMOFCH > 0
 	pHandle->Ch1[pHandle->id] = data[0];
 #if DEBUGSCOPENUMOFCH > 1
@@ -62,6 +62,6 @@ void DebugScopeStartWrite(DebugScope_Handle_t *pHandle)
 {
     pHandle->startWriteFlag = true;
     pHandle->id = 0;
-    LL_TIM_SetCounter(TIM5, 0);
-    LL_TIM_EnableCounter(TIM5);
+    LL_TIM_SetCounter(TIM6, 0);
+    LL_TIM_EnableCounter(TIM6);
 }

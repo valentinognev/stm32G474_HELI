@@ -1,7 +1,7 @@
 .PHONY: all build build-container cmake format format-linux flash-stlink flash-jlink format-container shell image build-container clean clean-image clean-all
 ############################### Native Makefile ###############################
 
-PROJECT_NAME ?= stm32G474_HELI
+PROJECT_NAME ?= stm32G431_HELI
 BUILD_DIR ?= build
 FIRMWARE := $(BUILD_DIR)/$(PROJECT_NAME).bin
 BUILD_TYPE ?= Debug
@@ -50,7 +50,7 @@ format-linux: $(addsuffix .format-linux,$(FORMAT_LINUX))
 	$(if $(filter $(PLATFORM),Linux),dos2unix -q $<,)
 
 # Device specific!
-DEVICE ?= STM32G474VE
+DEVICE ?= STM32G431VE
 
 flash-st: build
 	st-flash --reset write $(FIRMWARE) 0x08000000
