@@ -29,6 +29,18 @@ extern "C" {
 /* Includes ------------------------------------------------------------------*/
 #include "stm32g4xx_hal.h"
 
+#include "stm32g4xx_ll_tim.h"
+#include "stm32g4xx_ll_bus.h"
+#include "stm32g4xx_ll_cortex.h"
+#include "stm32g4xx_ll_rcc.h"
+#include "stm32g4xx_ll_system.h"
+#include "stm32g4xx_ll_utils.h"
+#include "stm32g4xx_ll_pwr.h"
+#include "stm32g4xx_ll_gpio.h"
+#include "stm32g4xx_ll_dma.h"
+
+#include "stm32g4xx_ll_exti.h"
+
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include "stm32g431xx.h"
@@ -84,6 +96,8 @@ void Error_Handler(void);
 #define AS5047_MISO_GPIO_Port GPIOA
 #define AS5047_MOSI_Pin GPIO_PIN_7
 #define AS5047_MOSI_GPIO_Port GPIOA
+#define THROTLE_Pin GPIO_PIN_0
+#define THROTLE_GPIO_Port GPIOB
 #define DSHOT_Pin GPIO_PIN_14
 #define DSHOT_GPIO_Port GPIOB
 #define SERVO_3_Pin GPIO_PIN_6
