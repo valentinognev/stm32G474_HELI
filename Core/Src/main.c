@@ -33,6 +33,7 @@
 #include "debug_scope.h"
 #include "mathutils.h"
 #include "dshot.h"
+#include "circBuffer.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -101,21 +102,14 @@ __IO uint32_t PHASE_Voltage = 0;        /* Value of voltage on GPIO pin (on whic
 __IO uint32_t AVGSPEED_Voltage = 0;        /* Value of voltage on GPIO pin (on which is mapped ADC channel) calculated from ADC conversion data (unit: mV) */
 __IO uint32_t AMPSPEED_Voltage = 0;        /* Value of voltage on GPIO pin (on which is mapped ADC channel) calculated from ADC conversion data (unit: mV) */
 
-extern float frequencySERVO_1, frequencySERVO_2, frequencySERVO_3, frequencyMOTOR_MAIN, frequencyMOTOR_TAIL;
-extern float widthSERVO_1, widthSERVO_2, widthSERVO_3, widthMOTOR_MAIN, widthMOTOR_TAIL;
-extern uint32_t riseDataSERVO_1[PWMNUMVAL], fallDataSERVO_1[PWMNUMVAL];
-extern uint32_t riseDataSERVO_2[PWMNUMVAL], fallDataSERVO_2[PWMNUMVAL];
-extern uint32_t riseDataSERVO_3[PWMNUMVAL], fallDataSERVO_3[PWMNUMVAL];
-extern uint32_t riseDataMOTOR_MAIN[PWMNUMVAL], fallDataMOTOR_MAIN[PWMNUMVAL];
-extern uint32_t riseDataMOTOR_TAIL[PWMNUMVAL], fallDataMOTOR_TAIL[PWMNUMVAL];
-extern uint32_t riseDatatemp[PWMNUMVAL], fallDatatemp[PWMNUMVAL];
+extern float frequencySERVO_1, frequencySERVO_2, frequencySERVO_3, frequencyMOTOR_MAIN, frequencyTHROTLE;
+extern float widthSERVO_1, widthSERVO_2, widthSERVO_3, widthMOTOR_MAIN, widthTHROTLE;
 
 float minFrequency = 100, maxFrequency = 500;
-extern uint8_t isMeasuredSERVO_1, isMeasuredSERVO_2, isMeasuredSERVO_3;
-extern uint8_t isMeasuredMOTOR_MAIN, isMeasuredMOTOR_TAIL;
 
 float minSERVO = 0.32187, maxSERVO = 0.88;
 float minMOTOR = 0.4, maxMOTOR = 0.88;
+float minTHROTLE = 0.4, maxTHROTLE = 0.88;
 float servoAngle1 = 0.f/180.f*PI, servoAngle2 = 120.f/180.f*PI, servoAngle3 = 240.f/180.f*PI;
 float servoR1 = 1, servoR2 = 1, servoR3 = 1;
 float servo1Nominal = 0.47652, servo2Nominal = 0.47931, servo3Nominal = 0.47848;
@@ -131,6 +125,7 @@ uint16_t VoltageToAmpSpeed(const uint16_t voltage, const uint16_t curspeed);
 uint16_t VoltageToPhase(const uint16_t voltage);
 void servo2planeABCD(const float servo1, const float servo2, const float servo3, 
                       float *A, float *B, float *C, float *D);
+uint8_t calculateFreqAndWidth(const circ_buf_t *riseData, const circ_buf_t *fallData, const float period, float *frequency, float *width);
 
 /* USER CODE END PFP */
 
@@ -178,16 +173,16 @@ int main(void)
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
   MX_DMA_Init();
-  MX_TIM1_Init();
   MX_TIM2_Init();
   MX_TIM3_Init();
-  MX_TIM4_Init();
   MX_TIM15_Init();
   MX_TIM6_Init();
   MX_SPI1_Init();
-  MX_USB_PCD_Init();
   MX_CORDIC_Init();
+  MX_TIM1_Init();
+  MX_USB_PCD_Init();
   /* USER CODE BEGIN 2 */
+
    /* Initiaize AS5047D */
   uint16_t nop,AGC;
 
@@ -231,54 +226,31 @@ int main(void)
   uint8_t debugRes = 0;
   float data[DEBUGSCOPENUMOFCH] = {0.0f, 0.0f};
   float servo1Command =0, servo2Command = 0, servo3Command = 0;
-  float motorMainCommand = 0, motorTailCommand = 0;
+  float motorMainCommand = 0, throtleCommand = 0;
   
   DebugScopeStartWrite(&debugData);
   // HAL_ADC_Start_DMA(&hadc1, aADCxConvertedData, ADC_CONVERTED_DATA_BUFFER_SIZE);
   HAL_TIM_Base_Start(&htim6);
-  /*## Start PWM signal generation in DMA mode ############################*/ 
+
+  LL_TIM_EnableCounter(TIM1);
+  LL_TIM_EnableCounter(TIM2);
+  LL_TIM_EnableCounter(TIM3);
+  LL_TIM_EnableCounter(TIM4);
+   /*## Start PWM signal generation in DMA mode ############################*/ 
   while (1)
   {
-    HAL_StatusTypeDef status1 = HAL_TIM_IC_Start_DMA(&htim1, TIM_CHANNEL_1, riseDataSERVO_1, PWMNUMVAL);
-    HAL_StatusTypeDef status2 = HAL_TIM_IC_Start_DMA(&htim1, TIM_CHANNEL_2, fallDataSERVO_1, PWMNUMVAL);
-    HAL_StatusTypeDef status3 = HAL_TIM_IC_Start_DMA(&htim2, TIM_CHANNEL_1, riseDataSERVO_2, PWMNUMVAL);
-    HAL_StatusTypeDef status4 = HAL_TIM_IC_Start_DMA(&htim2, TIM_CHANNEL_2, fallDataSERVO_2, PWMNUMVAL);
-    HAL_StatusTypeDef status5 = HAL_TIM_IC_Start_DMA(&htim3, TIM_CHANNEL_1, riseDataSERVO_3, PWMNUMVAL);
-    HAL_StatusTypeDef status6 = HAL_TIM_IC_Start_DMA(&htim3, TIM_CHANNEL_2, fallDataSERVO_3, PWMNUMVAL);
-    HAL_StatusTypeDef status7 = HAL_TIM_IC_Start_DMA(&htim4, TIM_CHANNEL_1, riseDataMOTOR_MAIN, PWMNUMVAL);
-    HAL_StatusTypeDef status8 = HAL_TIM_IC_Start_DMA(&htim4, TIM_CHANNEL_2, fallDataMOTOR_MAIN, PWMNUMVAL);
-    // HAL_StatusTypeDef status9 = HAL_TIM_IC_Start_DMA(&htim5, TIM_CHANNEL_1, riseDataMOTOR_TAIL, PWMNUMVAL);
-    // HAL_StatusTypeDef status10 = HAL_TIM_IC_Start_DMA(&htim5, TIM_CHANNEL_2, fallDataMOTOR_TAIL, PWMNUMVAL);
+    float period = 1.f/(TIMCLOCK/TIM2->PSC);;
+    servo1Command = (widthSERVO_1-minSERVO)/(maxSERVO-minSERVO);//-servo1Nominal;
+    servo2Command = (widthSERVO_2-minSERVO)/(maxSERVO-minSERVO);//-servo2Nominal;
+    servo3Command = (widthSERVO_3-minSERVO)/(maxSERVO-minSERVO);//-servo3Nominal;
 
-    if (isMeasuredSERVO_1 == 1)    
-    {
-      servo1Command = (widthSERVO_1-minSERVO)/(maxSERVO-minSERVO);//-servo1Nominal;
-      isMeasuredSERVO_1 = 0;
-    }
-    if (isMeasuredSERVO_2 == 1)
-    {
-      servo2Command = (widthSERVO_2-minSERVO)/(maxSERVO-minSERVO);//-servo2Nominal;
-      isMeasuredSERVO_2 = 0;
-    }
-    if (isMeasuredSERVO_3 == 1)
-    {
-      isMeasuredSERVO_3 = 0;
-      servo3Command = (widthSERVO_3-minSERVO)/(maxSERVO-minSERVO);//-servo3Nominal;
-    }
-    if (isMeasuredMOTOR_MAIN == 1)
-    {
-      motorMainCommand = (widthMOTOR_MAIN-minMOTOR)/(maxMOTOR-minMOTOR);
-      motorMainCommand = min(motorMainCommand, 1);
-      motorMainCommand = max(motorMainCommand, 0);
-      isMeasuredMOTOR_MAIN == 0;
-    }
-    // if (isMeasuredMOTOR_TAIL == 1)
-    // {
-    //   motorTailCommand = (widthMOTOR_TAIL-minMOTOR)/(maxMOTOR-minMOTOR);
-    //   motorTailCommand = min(motorTailCommand, 1);
-    //   motorTailCommand = max(motorTailCommand, 0);
-    //   isMeasuredMOTOR_TAIL = 0;
-    // }
+    motorMainCommand = (widthMOTOR_MAIN-minMOTOR)/(maxMOTOR-minMOTOR);
+    motorMainCommand = min(motorMainCommand, 1);
+    motorMainCommand = max(motorMainCommand, 0);
+
+    throtleCommand = (widthTHROTLE-minMOTOR)/(maxTHROTLE-minTHROTLE);
+    throtleCommand = min(throtleCommand, 1);
+    throtleCommand = max(throtleCommand, 0);
     float A, B, C, D;
     servo2planeABCD(servo1Command, servo2Command, servo3Command, &A, &B, &C, &D);
     //float heading = atan2f(B, A);
@@ -395,6 +367,30 @@ void SystemClock_Config(void)
 }
 
 /* USER CODE BEGIN 4 */
+uint8_t calculateFreqAndWidth(const circ_buf_t *riseData, const circ_buf_t *fallData, const float period, float *frequency, float *width)
+{
+  if (!circ_buf_is_full(riseData) || !circ_buf_is_full(fallData))
+    return 0;
+
+  scalarMeasurement_t riseDataLast, fallDataLast;
+  circ_buf_last(riseData, &riseDataLast);
+  circ_buf_last(fallData, &fallDataLast);
+
+  scalarMeasurement_t riseDataFirst, fallDataFirst;
+  circ_buf_first(riseData, &riseDataFirst);
+  circ_buf_first(fallData, &fallDataFirst);
+
+  float ticks = (riseDataFirst-riseDataLast)/(riseData->circBufferLen-1);
+  *frequency = 1.f/(ticks*period);
+  if (fallDataLast < riseDataLast)
+    *width = 1.0f-(fallDataLast-riseDataLast)/ticks;
+  else
+    *width = (fallDataLast-riseDataLast)/ticks;
+
+
+  return 1;
+}
+
 uint16_t VoltageToAVGSpeed(const uint16_t voltage)
 {
   return (uint16_t) ((uint32_t)(voltage - MINVOLTAGE) * (MAXSPEED - MINSPEED)/(MAXVOLTAGE - MINVOLTAGE) + MINSPEED);

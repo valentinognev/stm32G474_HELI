@@ -3,7 +3,7 @@
         {
             "showDevDebugOutput": "parsed",
             "cwd": "${workspaceRoot}",
-            "executable": "./build/stm32G474_HELI.elf",
+            "executable": "./build/stm32G4_HELI.elf",
             "name": "Debug STM32",
             "request": "launch",
             "type": "cortex-debug",
@@ -18,7 +18,7 @@
         {
             "showDevDebugOutput": "parsed",
             "cwd": "${workspaceRoot}",
-            "executable": "./build/stm32G474_HELI.elf",
+            "executable": "./build/stm32G4_HELI.elf",
             "name": "Attach STM32",
             "request": "attach",
             "type": "cortex-debug",
@@ -33,7 +33,7 @@
         {
             "showDevDebugOutput": "parsed",
             "cwd": "${workspaceRoot}",
-            "executable": "./build/stm32G474_HELI.elf",
+            "executable": "./build/stm32G4_HELI.elf",
             "name": "Launch JLink",
             "request": "launch",
             "type": "cortex-debug",
@@ -64,7 +64,7 @@
         {
             "showDevDebugOutput": "parsed",
             "cwd": "${workspaceRoot}",
-            "executable": "./build/stm32G474_HELI.elf",
+            "executable": "./build/stm32G4_HELI.elf",
             "name": "Attach JLink",
             "request": "attach",
             "type": "cortex-debug",

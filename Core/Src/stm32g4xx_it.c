@@ -59,14 +59,6 @@
 /* External variables --------------------------------------------------------*/
 extern DMA_HandleTypeDef hdma_spi1_rx;
 extern DMA_HandleTypeDef hdma_spi1_tx;
-extern DMA_HandleTypeDef hdma_tim1_ch1;
-extern DMA_HandleTypeDef hdma_tim1_ch2;
-extern DMA_HandleTypeDef hdma_tim2_ch1;
-extern DMA_HandleTypeDef hdma_tim2_ch2;
-extern DMA_HandleTypeDef hdma_tim3_ch1;
-extern DMA_HandleTypeDef hdma_tim3_ch2;
-extern DMA_HandleTypeDef hdma_tim4_ch1;
-extern DMA_HandleTypeDef hdma_tim4_ch2;
 extern DMA_HandleTypeDef hdma_tim15_ch1;
 /* USER CODE BEGIN EV */
 
@@ -211,115 +203,55 @@ void SysTick_Handler(void)
 /******************************************************************************/
 
 /**
-  * @brief This function handles DMA1 channel1 global interrupt.
+  * @brief This function handles TIM1 update interrupt and TIM16 global interrupt.
   */
-void DMA1_Channel1_IRQHandler(void)
+void TIM1_UP_TIM16_IRQHandler(void)
 {
-  /* USER CODE BEGIN DMA1_Channel1_IRQn 0 */
+  /* USER CODE BEGIN TIM1_UP_TIM16_IRQn 0 */
+  if (LL_TIM_IsActiveFlag_UPDATE(TIM1))
+  {
+    TIM_PeriodElapsedCallback(TIM1);
+    LL_TIM_ClearFlag_UPDATE(TIM1);
+  }
+  /* USER CODE END TIM1_UP_TIM16_IRQn 0 */
 
-  /* USER CODE END DMA1_Channel1_IRQn 0 */
-  HAL_DMA_IRQHandler(&hdma_tim1_ch1);
-  /* USER CODE BEGIN DMA1_Channel1_IRQn 1 */
+  /* USER CODE BEGIN TIM1_UP_TIM16_IRQn 1 */
 
-  /* USER CODE END DMA1_Channel1_IRQn 1 */
+  /* USER CODE END TIM1_UP_TIM16_IRQn 1 */
 }
 
 /**
-  * @brief This function handles DMA1 channel2 global interrupt.
+  * @brief This function handles TIM2 global interrupt.
   */
-void DMA1_Channel2_IRQHandler(void)
+void TIM2_IRQHandler(void)
 {
-  /* USER CODE BEGIN DMA1_Channel2_IRQn 0 */
+  /* USER CODE BEGIN TIM2_IRQn 0 */
+  if (LL_TIM_IsActiveFlag_UPDATE(TIM2))
+  {
+    TIM_PeriodElapsedCallback(TIM2);
+    LL_TIM_ClearFlag_UPDATE(TIM2);
+  }
+  /* USER CODE END TIM2_IRQn 0 */
+  /* USER CODE BEGIN TIM2_IRQn 1 */
 
-  /* USER CODE END DMA1_Channel2_IRQn 0 */
-  HAL_DMA_IRQHandler(&hdma_tim1_ch2);
-  /* USER CODE BEGIN DMA1_Channel2_IRQn 1 */
-
-  /* USER CODE END DMA1_Channel2_IRQn 1 */
+  /* USER CODE END TIM2_IRQn 1 */
 }
 
 /**
-  * @brief This function handles DMA1 channel3 global interrupt.
+  * @brief This function handles TIM3 global interrupt.
   */
-void DMA1_Channel3_IRQHandler(void)
+void TIM3_IRQHandler(void)
 {
-  /* USER CODE BEGIN DMA1_Channel3_IRQn 0 */
+  /* USER CODE BEGIN TIM3_IRQn 0 */
+  if (LL_TIM_IsActiveFlag_UPDATE(TIM3))
+  {
+    TIM_PeriodElapsedCallback(TIM3);
+    LL_TIM_ClearFlag_UPDATE(TIM3);
+  }
+  /* USER CODE END TIM3_IRQn 0 */
+  /* USER CODE BEGIN TIM3_IRQn 1 */
 
-  /* USER CODE END DMA1_Channel3_IRQn 0 */
-  HAL_DMA_IRQHandler(&hdma_tim2_ch1);
-  /* USER CODE BEGIN DMA1_Channel3_IRQn 1 */
-
-  /* USER CODE END DMA1_Channel3_IRQn 1 */
-}
-
-/**
-  * @brief This function handles DMA1 channel4 global interrupt.
-  */
-void DMA1_Channel4_IRQHandler(void)
-{
-  /* USER CODE BEGIN DMA1_Channel4_IRQn 0 */
-
-  /* USER CODE END DMA1_Channel4_IRQn 0 */
-  HAL_DMA_IRQHandler(&hdma_tim2_ch2);
-  /* USER CODE BEGIN DMA1_Channel4_IRQn 1 */
-
-  /* USER CODE END DMA1_Channel4_IRQn 1 */
-}
-
-/**
-  * @brief This function handles DMA1 channel5 global interrupt.
-  */
-void DMA1_Channel5_IRQHandler(void)
-{
-  /* USER CODE BEGIN DMA1_Channel5_IRQn 0 */
-
-  /* USER CODE END DMA1_Channel5_IRQn 0 */
-  HAL_DMA_IRQHandler(&hdma_tim3_ch1);
-  /* USER CODE BEGIN DMA1_Channel5_IRQn 1 */
-
-  /* USER CODE END DMA1_Channel5_IRQn 1 */
-}
-
-/**
-  * @brief This function handles DMA1 channel6 global interrupt.
-  */
-void DMA1_Channel6_IRQHandler(void)
-{
-  /* USER CODE BEGIN DMA1_Channel6_IRQn 0 */
-
-  /* USER CODE END DMA1_Channel6_IRQn 0 */
-  HAL_DMA_IRQHandler(&hdma_tim3_ch2);
-  /* USER CODE BEGIN DMA1_Channel6_IRQn 1 */
-
-  /* USER CODE END DMA1_Channel6_IRQn 1 */
-}
-
-/**
-  * @brief This function handles DMA2 channel1 global interrupt.
-  */
-void DMA2_Channel1_IRQHandler(void)
-{
-  /* USER CODE BEGIN DMA2_Channel1_IRQn 0 */
-
-  /* USER CODE END DMA2_Channel1_IRQn 0 */
-  HAL_DMA_IRQHandler(&hdma_tim4_ch1);
-  /* USER CODE BEGIN DMA2_Channel1_IRQn 1 */
-
-  /* USER CODE END DMA2_Channel1_IRQn 1 */
-}
-
-/**
-  * @brief This function handles DMA2 channel2 global interrupt.
-  */
-void DMA2_Channel2_IRQHandler(void)
-{
-  /* USER CODE BEGIN DMA2_Channel2_IRQn 0 */
-
-  /* USER CODE END DMA2_Channel2_IRQn 0 */
-  HAL_DMA_IRQHandler(&hdma_tim4_ch2);
-  /* USER CODE BEGIN DMA2_Channel2_IRQn 1 */
-
-  /* USER CODE END DMA2_Channel2_IRQn 1 */
+  /* USER CODE END TIM3_IRQn 1 */
 }
 
 /**
@@ -342,11 +274,11 @@ void DMA2_Channel3_IRQHandler(void)
 void DMA2_Channel4_IRQHandler(void)
 {
   /* USER CODE BEGIN DMA2_Channel4_IRQn 0 */
-    if(LL_DMA_IsActiveFlag_TC4(DMA2) == 1)
+    if(LL_DMA_IsActiveFlag_TC4(DMA2))
     {
       DMA2_ReceiveComplete(); // SPI Receive done
     }
-    else if(LL_DMA_IsActiveFlag_TE4(DMA2) == 1)
+    else if(LL_DMA_IsActiveFlag_TE4(DMA2))
     {
       LL_DMA_ClearFlag_TE4(DMA2);      // SPI Receive error
     }
@@ -363,11 +295,11 @@ void DMA2_Channel4_IRQHandler(void)
 void DMA2_Channel5_IRQHandler(void)
 {
   /* USER CODE BEGIN DMA2_Channel5_IRQn 0 */
-    if(LL_DMA_IsActiveFlag_TC5(DMA2) == 1)  
+    if(LL_DMA_IsActiveFlag_TC5(DMA2))  
     {
       DMA2_TransmitComplete();  // SPI Transmit done
     }
-    else if(LL_DMA_IsActiveFlag_TE5(DMA2) == 1)
+    else if(LL_DMA_IsActiveFlag_TE5(DMA2))
     {
       LL_DMA_ClearFlag_TE5(DMA2);        // SPI Transmit error
     }

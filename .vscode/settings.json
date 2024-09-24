@@ -35,7 +35,8 @@
         "stm32g4xx_ll_gpio.h": "c",
         "stm32g4xx_ll_exti.h": "c",
         "stm32g474xx.h": "c",
-        "dshot.h": "c"
+        "dshot.h": "c",
+        "tim.h": "c"
     },
     "cortex-debug.variableUseNaturalFormat": true
 }
