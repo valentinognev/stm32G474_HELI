@@ -24,21 +24,20 @@
 #include "main.h"
 #include "circBuffer.h"
 
-#define FREQDESIRED (1000000)
+#define FREQDESIRED (10000000)
 #define PWM_CHARACTERISTIC_FREQUENCY (400) // Hz PWMNUMVAL
-#undef PSCALERSERVO_2
-#define PSCALERSERVO_2 (TIMCLOCK/FREQDESIRED-1) //(170-1)
-#undef PSCALERSERVO_1
-#define PSCALERSERVO_1 (TIMCLOCK/FREQDESIRED-1)
-#undef PSCALERSERVO_3
-#define PSCALERSERVO_3 (TIMCLOCK/FREQDESIRED-1)
-#undef PSCALERMOTOR_MAIN
-#define PSCALERMOTOR_MAIN (TIMCLOCK/FREQDESIRED-1) //(170-1)
+#undef PSCALERSERVO
+#define PSCALERSERVO (TIMCLOCK/FREQDESIRED-1) //(170-1)
+#undef PSCALERMOTOR
+#define PSCALERMOTOR (TIMCLOCK/FREQDESIRED-1) //(170-1)
 #undef PSCALERTHROTLE
-#define PSCALERTHROTLE (TIMCLOCK/FREQDESIRED-1)
+#define PSCALERTHROTLE (TIMCLOCK/FREQDESIRED-1) //(170-1)
 
-float frequencySERVO_1 = 0, frequencySERVO_2 = 0, frequencySERVO_3 = 0, frequencyMOTOR_MAIN = 0, frequencyTHROTLE = 0;
-float widthSERVO_1 = 0, widthSERVO_2 = 0, widthSERVO_3 = 0, widthMOTOR_MAIN = 0, widthTHROTLE = 0;
+
+float frequencySERVO_1 = 0, frequencySERVO_2 = 0, frequencySERVO_3 = 0;
+float frequencyMOTOR_MAIN = 0, frequencyMOTOR_TAIL = 0, frequencyTHROTLE = 0, frequencyPITCH = 0, frequencyROLL = 0;
+float widthSERVO_1 = 0, widthSERVO_2 = 0, widthSERVO_3 = 0;
+float widthMOTOR_MAIN = 0, widthMOTOR_TAIL = 0, widthTHROTLE = 0, widthPITCH = 0, widthROLL = 0;
 /* USER CODE END 0 */
 
 TIM_HandleTypeDef htim6;
@@ -63,8 +62,17 @@ void MX_TIM1_Init(void)
   LL_AHB2_GRP1_EnableClock(LL_AHB2_GRP1_PERIPH_GPIOA);
   /**TIM1 GPIO Configuration
   PA8   ------> TIM1_CH1
+  PA10   ------> TIM1_CH3
   */
   GPIO_InitStruct.Pin = LL_GPIO_PIN_8;
+  GPIO_InitStruct.Mode = LL_GPIO_MODE_ALTERNATE;
+  GPIO_InitStruct.Speed = LL_GPIO_SPEED_FREQ_LOW;
+  GPIO_InitStruct.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
+  GPIO_InitStruct.Pull = LL_GPIO_PULL_NO;
+  GPIO_InitStruct.Alternate = LL_GPIO_AF_6;
+  LL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+
+  GPIO_InitStruct.Pin = LL_GPIO_PIN_10;
   GPIO_InitStruct.Mode = LL_GPIO_MODE_ALTERNATE;
   GPIO_InitStruct.Speed = LL_GPIO_SPEED_FREQ_LOW;
   GPIO_InitStruct.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
@@ -75,13 +83,11 @@ void MX_TIM1_Init(void)
   /* TIM1 interrupt Init */
   NVIC_SetPriority(TIM1_UP_TIM16_IRQn, NVIC_EncodePriority(NVIC_GetPriorityGrouping(),0, 0));
   NVIC_EnableIRQ(TIM1_UP_TIM16_IRQn);
-  NVIC_SetPriority(TIM1_CC_IRQn, NVIC_EncodePriority(NVIC_GetPriorityGrouping(),0, 0));
-  NVIC_EnableIRQ(TIM1_CC_IRQn);
 
   /* USER CODE BEGIN TIM1_Init 1 */
 
   /* USER CODE END TIM1_Init 1 */
-  TIM_InitStruct.Prescaler = PSCALERSERVO_1;
+  TIM_InitStruct.Prescaler = PSCALERMOTOR;
   TIM_InitStruct.CounterMode = LL_TIM_COUNTERMODE_UP;
   TIM_InitStruct.Autoreload = 65535;
   TIM_InitStruct.ClockDivision = LL_TIM_CLOCKDIVISION_DIV1;
@@ -100,14 +106,20 @@ void MX_TIM1_Init(void)
   LL_TIM_DisableMasterSlaveMode(TIM1);
   LL_TIM_IC_SetActiveInput(TIM1, LL_TIM_CHANNEL_CH1, LL_TIM_ACTIVEINPUT_DIRECTTI);
   LL_TIM_IC_SetPrescaler(TIM1, LL_TIM_CHANNEL_CH1, LL_TIM_ICPSC_DIV1);
+  LL_TIM_IC_SetFilter(TIM1, LL_TIM_CHANNEL_CH1, LL_TIM_IC_FILTER_FDIV1_N2);
   LL_TIM_IC_SetActiveInput(TIM1, LL_TIM_CHANNEL_CH2, LL_TIM_ACTIVEINPUT_INDIRECTTI);
   LL_TIM_IC_SetPrescaler(TIM1, LL_TIM_CHANNEL_CH2, LL_TIM_ICPSC_DIV1);
   LL_TIM_IC_SetFilter(TIM1, LL_TIM_CHANNEL_CH2, LL_TIM_IC_FILTER_FDIV1);
   LL_TIM_IC_SetPolarity(TIM1, LL_TIM_CHANNEL_CH2, LL_TIM_IC_POLARITY_FALLING);
+  LL_TIM_IC_SetActiveInput(TIM1, LL_TIM_CHANNEL_CH3, LL_TIM_ACTIVEINPUT_DIRECTTI);
+  LL_TIM_IC_SetPrescaler(TIM1, LL_TIM_CHANNEL_CH3, LL_TIM_ICPSC_DIV1);
+  LL_TIM_IC_SetFilter(TIM1, LL_TIM_CHANNEL_CH3, LL_TIM_IC_FILTER_FDIV1_N2);
+  LL_TIM_IC_SetPolarity(TIM1, LL_TIM_CHANNEL_CH3, LL_TIM_IC_POLARITY_FALLING);
   /* USER CODE BEGIN TIM1_Init 2 */
   LL_TIM_EnableIT_UPDATE(TIM1);
   LL_TIM_CC_EnableChannel(TIM1, LL_TIM_CHANNEL_CH1);
   LL_TIM_CC_EnableChannel(TIM1, LL_TIM_CHANNEL_CH2);
+  LL_TIM_CC_EnableChannel(TIM1, LL_TIM_CHANNEL_CH3);
   /* USER CODE END TIM1_Init 2 */
 
 }
@@ -129,8 +141,26 @@ void MX_TIM2_Init(void)
   LL_AHB2_GRP1_EnableClock(LL_AHB2_GRP1_PERIPH_GPIOA);
   /**TIM2 GPIO Configuration
   PA0   ------> TIM2_CH1
+  PA2   ------> TIM2_CH3
+  PA3   ------> TIM2_CH4
   */
   GPIO_InitStruct.Pin = LL_GPIO_PIN_0;
+  GPIO_InitStruct.Mode = LL_GPIO_MODE_ALTERNATE;
+  GPIO_InitStruct.Speed = LL_GPIO_SPEED_FREQ_LOW;
+  GPIO_InitStruct.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
+  GPIO_InitStruct.Pull = LL_GPIO_PULL_NO;
+  GPIO_InitStruct.Alternate = LL_GPIO_AF_1;
+  LL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+
+  GPIO_InitStruct.Pin = LL_GPIO_PIN_2;
+  GPIO_InitStruct.Mode = LL_GPIO_MODE_ALTERNATE;
+  GPIO_InitStruct.Speed = LL_GPIO_SPEED_FREQ_LOW;
+  GPIO_InitStruct.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
+  GPIO_InitStruct.Pull = LL_GPIO_PULL_NO;
+  GPIO_InitStruct.Alternate = LL_GPIO_AF_1;
+  LL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+
+  GPIO_InitStruct.Pin = LL_GPIO_PIN_3;
   GPIO_InitStruct.Mode = LL_GPIO_MODE_ALTERNATE;
   GPIO_InitStruct.Speed = LL_GPIO_SPEED_FREQ_LOW;
   GPIO_InitStruct.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
@@ -145,7 +175,7 @@ void MX_TIM2_Init(void)
   /* USER CODE BEGIN TIM2_Init 1 */
 
   /* USER CODE END TIM2_Init 1 */
-  TIM_InitStruct.Prescaler = PSCALERSERVO_2;
+  TIM_InitStruct.Prescaler = PSCALERTHROTLE;
   TIM_InitStruct.CounterMode = LL_TIM_COUNTERMODE_UP;
   TIM_InitStruct.Autoreload = 65535;
   TIM_InitStruct.ClockDivision = LL_TIM_CLOCKDIVISION_DIV1;
@@ -166,6 +196,14 @@ void MX_TIM2_Init(void)
   LL_TIM_IC_SetPrescaler(TIM2, LL_TIM_CHANNEL_CH2, LL_TIM_ICPSC_DIV1);
   LL_TIM_IC_SetFilter(TIM2, LL_TIM_CHANNEL_CH2, LL_TIM_IC_FILTER_FDIV1);
   LL_TIM_IC_SetPolarity(TIM2, LL_TIM_CHANNEL_CH2, LL_TIM_IC_POLARITY_FALLING);
+  LL_TIM_IC_SetActiveInput(TIM2, LL_TIM_CHANNEL_CH3, LL_TIM_ACTIVEINPUT_DIRECTTI);
+  LL_TIM_IC_SetPrescaler(TIM2, LL_TIM_CHANNEL_CH3, LL_TIM_ICPSC_DIV1);
+  LL_TIM_IC_SetFilter(TIM2, LL_TIM_CHANNEL_CH3, LL_TIM_IC_FILTER_FDIV1_N2);
+  LL_TIM_IC_SetPolarity(TIM2, LL_TIM_CHANNEL_CH3, LL_TIM_IC_POLARITY_FALLING);
+  LL_TIM_IC_SetActiveInput(TIM2, LL_TIM_CHANNEL_CH4, LL_TIM_ACTIVEINPUT_DIRECTTI);
+  LL_TIM_IC_SetPrescaler(TIM2, LL_TIM_CHANNEL_CH4, LL_TIM_ICPSC_DIV1);
+  LL_TIM_IC_SetFilter(TIM2, LL_TIM_CHANNEL_CH4, LL_TIM_IC_FILTER_FDIV1_N2);
+  LL_TIM_IC_SetPolarity(TIM2, LL_TIM_CHANNEL_CH4, LL_TIM_IC_POLARITY_FALLING);
   /* USER CODE BEGIN TIM2_Init 2 */
   // enable cc1
   // LL_TIM_EnableIT_CC1(TIM2);
@@ -173,7 +211,8 @@ void MX_TIM2_Init(void)
   LL_TIM_EnableIT_UPDATE(TIM2);
   LL_TIM_CC_EnableChannel(TIM2, LL_TIM_CHANNEL_CH1);
   LL_TIM_CC_EnableChannel(TIM2, LL_TIM_CHANNEL_CH2);
-
+  LL_TIM_CC_EnableChannel(TIM2, LL_TIM_CHANNEL_CH3);
+  LL_TIM_CC_EnableChannel(TIM2, LL_TIM_CHANNEL_CH4);
   /* USER CODE END TIM2_Init 2 */
 
 }
@@ -196,9 +235,18 @@ void MX_TIM3_Init(void)
   LL_AHB2_GRP1_EnableClock(LL_AHB2_GRP1_PERIPH_GPIOC);
   /**TIM3 GPIO Configuration
   PB0   ------> TIM3_CH3
+  PB1   ------> TIM3_CH4
   PC6   ------> TIM3_CH1
   */
   GPIO_InitStruct.Pin = LL_GPIO_PIN_0;
+  GPIO_InitStruct.Mode = LL_GPIO_MODE_ALTERNATE;
+  GPIO_InitStruct.Speed = LL_GPIO_SPEED_FREQ_LOW;
+  GPIO_InitStruct.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
+  GPIO_InitStruct.Pull = LL_GPIO_PULL_NO;
+  GPIO_InitStruct.Alternate = LL_GPIO_AF_2;
+  LL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+
+  GPIO_InitStruct.Pin = LL_GPIO_PIN_1;
   GPIO_InitStruct.Mode = LL_GPIO_MODE_ALTERNATE;
   GPIO_InitStruct.Speed = LL_GPIO_SPEED_FREQ_LOW;
   GPIO_InitStruct.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
@@ -221,7 +269,7 @@ void MX_TIM3_Init(void)
   /* USER CODE BEGIN TIM3_Init 1 */
 
   /* USER CODE END TIM3_Init 1 */
-  TIM_InitStruct.Prescaler = PSCALERSERVO_3;
+  TIM_InitStruct.Prescaler = PSCALERSERVO;
   TIM_InitStruct.CounterMode = LL_TIM_COUNTERMODE_UP;
   TIM_InitStruct.Autoreload = 65535;
   TIM_InitStruct.ClockDivision = LL_TIM_CLOCKDIVISION_DIV1;
@@ -238,17 +286,18 @@ void MX_TIM3_Init(void)
   LL_TIM_DisableMasterSlaveMode(TIM3);
   LL_TIM_IC_SetActiveInput(TIM3, LL_TIM_CHANNEL_CH1, LL_TIM_ACTIVEINPUT_DIRECTTI);
   LL_TIM_IC_SetPrescaler(TIM3, LL_TIM_CHANNEL_CH1, LL_TIM_ICPSC_DIV1);
+  LL_TIM_IC_SetFilter(TIM3, LL_TIM_CHANNEL_CH1, LL_TIM_IC_FILTER_FDIV1_N2);
   LL_TIM_IC_SetActiveInput(TIM3, LL_TIM_CHANNEL_CH2, LL_TIM_ACTIVEINPUT_INDIRECTTI);
   LL_TIM_IC_SetPrescaler(TIM3, LL_TIM_CHANNEL_CH2, LL_TIM_ICPSC_DIV1);
   LL_TIM_IC_SetFilter(TIM3, LL_TIM_CHANNEL_CH2, LL_TIM_IC_FILTER_FDIV1);
   LL_TIM_IC_SetPolarity(TIM3, LL_TIM_CHANNEL_CH2, LL_TIM_IC_POLARITY_FALLING);
   LL_TIM_IC_SetActiveInput(TIM3, LL_TIM_CHANNEL_CH3, LL_TIM_ACTIVEINPUT_DIRECTTI);
   LL_TIM_IC_SetPrescaler(TIM3, LL_TIM_CHANNEL_CH3, LL_TIM_ICPSC_DIV1);
-  LL_TIM_IC_SetFilter(TIM3, LL_TIM_CHANNEL_CH3, LL_TIM_IC_FILTER_FDIV1);
-  LL_TIM_IC_SetPolarity(TIM3, LL_TIM_CHANNEL_CH3, LL_TIM_IC_POLARITY_RISING);
-  LL_TIM_IC_SetActiveInput(TIM3, LL_TIM_CHANNEL_CH4, LL_TIM_ACTIVEINPUT_INDIRECTTI);
+  LL_TIM_IC_SetFilter(TIM3, LL_TIM_CHANNEL_CH3, LL_TIM_IC_FILTER_FDIV1_N2);
+  LL_TIM_IC_SetPolarity(TIM3, LL_TIM_CHANNEL_CH3, LL_TIM_IC_POLARITY_FALLING);
+  LL_TIM_IC_SetActiveInput(TIM3, LL_TIM_CHANNEL_CH4, LL_TIM_ACTIVEINPUT_DIRECTTI);
   LL_TIM_IC_SetPrescaler(TIM3, LL_TIM_CHANNEL_CH4, LL_TIM_ICPSC_DIV1);
-  LL_TIM_IC_SetFilter(TIM3, LL_TIM_CHANNEL_CH4, LL_TIM_IC_FILTER_FDIV1);
+  LL_TIM_IC_SetFilter(TIM3, LL_TIM_CHANNEL_CH4, LL_TIM_IC_FILTER_FDIV1_N2);
   LL_TIM_IC_SetPolarity(TIM3, LL_TIM_CHANNEL_CH4, LL_TIM_IC_POLARITY_FALLING);
   /* USER CODE BEGIN TIM3_Init 2 */
   LL_TIM_EnableIT_UPDATE(TIM3);
@@ -257,68 +306,6 @@ void MX_TIM3_Init(void)
   LL_TIM_CC_EnableChannel(TIM3, LL_TIM_CHANNEL_CH3);
   LL_TIM_CC_EnableChannel(TIM3, LL_TIM_CHANNEL_CH4);
   /* USER CODE END TIM3_Init 2 */
-
-}
-/* TIM4 init function */
-void MX_TIM4_Init(void)
-{
-
-  /* USER CODE BEGIN TIM4_Init 0 */
-
-  /* USER CODE END TIM4_Init 0 */
-
-  LL_TIM_InitTypeDef TIM_InitStruct = {0};
-
-  LL_GPIO_InitTypeDef GPIO_InitStruct = {0};
-
-  /* Peripheral clock enable */
-  LL_APB1_GRP1_EnableClock(LL_APB1_GRP1_PERIPH_TIM4);
-
-  LL_AHB2_GRP1_EnableClock(LL_AHB2_GRP1_PERIPH_GPIOB);
-  /**TIM4 GPIO Configuration
-  PB6   ------> TIM4_CH1
-  */
-  GPIO_InitStruct.Pin = LL_GPIO_PIN_6;
-  GPIO_InitStruct.Mode = LL_GPIO_MODE_ALTERNATE;
-  GPIO_InitStruct.Speed = LL_GPIO_SPEED_FREQ_LOW;
-  GPIO_InitStruct.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
-  GPIO_InitStruct.Pull = LL_GPIO_PULL_NO;
-  GPIO_InitStruct.Alternate = LL_GPIO_AF_2;
-  LL_GPIO_Init(GPIOB, &GPIO_InitStruct);
-
-  /* TIM4 interrupt Init */
-  NVIC_SetPriority(TIM4_IRQn, NVIC_EncodePriority(NVIC_GetPriorityGrouping(),0, 0));
-  NVIC_EnableIRQ(TIM4_IRQn);
-
-  /* USER CODE BEGIN TIM4_Init 1 */
-
-  /* USER CODE END TIM4_Init 1 */
-  TIM_InitStruct.Prescaler = PSCALERMOTOR_MAIN;
-  TIM_InitStruct.CounterMode = LL_TIM_COUNTERMODE_UP;
-  TIM_InitStruct.Autoreload = 65535;
-  TIM_InitStruct.ClockDivision = LL_TIM_CLOCKDIVISION_DIV1;
-  LL_TIM_Init(TIM4, &TIM_InitStruct);
-  LL_TIM_EnableARRPreload(TIM4);
-  LL_TIM_SetClockSource(TIM4, LL_TIM_CLOCKSOURCE_INTERNAL);
-  LL_TIM_SetTriggerInput(TIM4, LL_TIM_TS_TI1FP1);
-  LL_TIM_SetSlaveMode(TIM4, LL_TIM_SLAVEMODE_RESET);
-  LL_TIM_IC_SetFilter(TIM4, LL_TIM_CHANNEL_CH1, LL_TIM_IC_FILTER_FDIV1);
-  LL_TIM_IC_SetPolarity(TIM4, LL_TIM_CHANNEL_CH1, LL_TIM_IC_POLARITY_RISING);
-  LL_TIM_DisableIT_TRIG(TIM4);
-  LL_TIM_DisableDMAReq_TRIG(TIM4);
-  LL_TIM_SetTriggerOutput(TIM4, LL_TIM_TRGO_RESET);
-  LL_TIM_DisableMasterSlaveMode(TIM4);
-  LL_TIM_IC_SetActiveInput(TIM4, LL_TIM_CHANNEL_CH1, LL_TIM_ACTIVEINPUT_DIRECTTI);
-  LL_TIM_IC_SetPrescaler(TIM4, LL_TIM_CHANNEL_CH1, LL_TIM_ICPSC_DIV1);
-  LL_TIM_IC_SetActiveInput(TIM4, LL_TIM_CHANNEL_CH2, LL_TIM_ACTIVEINPUT_INDIRECTTI);
-  LL_TIM_IC_SetPrescaler(TIM4, LL_TIM_CHANNEL_CH2, LL_TIM_ICPSC_DIV1);
-  LL_TIM_IC_SetFilter(TIM4, LL_TIM_CHANNEL_CH2, LL_TIM_IC_FILTER_FDIV1);
-  LL_TIM_IC_SetPolarity(TIM4, LL_TIM_CHANNEL_CH2, LL_TIM_IC_POLARITY_FALLING);
-  /* USER CODE BEGIN TIM4_Init 2 */
-  LL_TIM_EnableIT_UPDATE(TIM4);
-  LL_TIM_CC_EnableChannel(TIM4, LL_TIM_CHANNEL_CH1);
-  LL_TIM_CC_EnableChannel(TIM4, LL_TIM_CHANNEL_CH2);
-  /* USER CODE END TIM4_Init 2 */
 
 }
 /* TIM6 init function */
@@ -337,7 +324,7 @@ void MX_TIM6_Init(void)
   htim6.Instance = TIM6;
   htim6.Init.Prescaler = 170-1;
   htim6.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim6.Init.Period = 9999;
+  htim6.Init.Period = 65535;
   htim6.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
   if (HAL_TIM_Base_Init(&htim6) != HAL_OK)
   {
@@ -538,25 +525,26 @@ void TIM_PeriodElapsedCallback(TIM_TypeDef *htim)
 {
   if (htim == TIM1)
   {
-    frequencySERVO_1 = ((float)(TIMCLOCK)/(TIM1->PSC+1))/(TIM1->CCR1);
-    widthSERVO_1 = (float)(TIM1->CCR2)/(float)(TIM1->CCR1);
+    frequencyMOTOR_MAIN = ((float)(TIMCLOCK)/(TIM1->PSC+1))/(TIM1->CCR1);
+    frequencyMOTOR_TAIL = frequencyMOTOR_MAIN;
+    widthMOTOR_MAIN = (float)(TIM1->CCR2)/(float)(TIM2->CCR1);
+    widthMOTOR_TAIL = (float)(TIM1->CCR3)/(float)(TIM2->CCR1);
   }
-  else if (htim == TIM2)
+  if (htim == TIM2)
   {
-    frequencySERVO_2 = ((float)(TIMCLOCK)/(TIM2->PSC+1))/(TIM2->CCR1);
-    widthSERVO_2 = (float)(TIM2->CCR2)/(float)(TIM2->CCR1);
+    frequencyTHROTLE = ((float)(TIMCLOCK)/(TIM2->PSC+1))/(TIM2->CCR1);
+    frequencyPITCH = frequencyROLL = frequencyTHROTLE;
+    widthTHROTLE = (float)(TIM2->CCR2)/(float)(TIM2->CCR1);
+    widthPITCH = (float)(TIM2->CCR3)/(float)(TIM2->CCR1);
+    widthROLL = (float)(TIM2->CCR4)/(float)(TIM2->CCR1);
   }
   else if (htim == TIM3)
   {
-    frequencySERVO_3 = ((float)(TIMCLOCK)/(TIM3->PSC+1))/(TIM3->CCR1);
-    widthSERVO_3 = (float)(TIM3->CCR2)/(float)(TIM3->CCR1);
-    frequencyTHROTLE = ((float)(TIMCLOCK)/(TIM3->PSC+1))/(TIM3->CCR3);
-    widthTHROTLE = (float)(TIM3->CCR4)/(float)(TIM3->CCR3);
-  }
-  else if (htim == TIM4)
-  {
-    frequencyMOTOR_MAIN = ((float)(TIMCLOCK)/(TIM4->PSC+1))/(TIM4->CCR1);
-    widthMOTOR_MAIN = (float)(TIM4->CCR2)/(float)(TIM4->CCR1);
+    frequencySERVO_1 = ((float)(TIMCLOCK)/(TIM3->PSC+1))/(TIM3->CCR1);
+    frequencySERVO_3 = frequencySERVO_2 = frequencySERVO_1;
+    widthSERVO_1 = (float)(TIM3->CCR2)/(float)(TIM3->CCR1);
+    widthSERVO_2 = (float)(TIM3->CCR3)/(float)(TIM3->CCR1);
+    widthSERVO_3 = (float)(TIM3->CCR4)/(float)(TIM3->CCR1);
   }
 }
 

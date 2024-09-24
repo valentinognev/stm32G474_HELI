@@ -173,15 +173,14 @@ int main(void)
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
   MX_DMA_Init();
-  MX_TIM1_Init();
   MX_TIM2_Init();
   MX_TIM3_Init();
-  MX_TIM4_Init();
   MX_TIM15_Init();
   MX_TIM6_Init();
   MX_SPI1_Init();
-  MX_USB_PCD_Init();
   MX_CORDIC_Init();
+  MX_TIM1_Init();
+  MX_USB_PCD_Init();
   /* USER CODE BEGIN 2 */
 
    /* Initiaize AS5047D */
