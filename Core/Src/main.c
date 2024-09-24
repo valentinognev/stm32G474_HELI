@@ -288,7 +288,7 @@ int main(void)
 
     errorFlag[7] = AS5047D_Read(  AS5047_CS_GPIO_Port,   AS5047_CS_Pin, AS5047D_ANGLECOM, &ANGLECOM);
     spiAngle32 = ANGLECOM * 360 / 16384;
-    // errorFlag[15] = AS5047D_Get_True_Angle_Value(&spiAngle);
+    errorFlag[15] = AS5047D_Get_True_Angle_Value(&spiAngle);
     if (errorFlag[7] != 0)
     {
       errorFlag[16] = AS5047D_Read(AS5047_CS_GPIO_Port, AS5047_CS_Pin, AS5047D_ERRFL, &ERRFL);
