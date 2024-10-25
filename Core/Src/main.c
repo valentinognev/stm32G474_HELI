@@ -107,14 +107,17 @@ extern float widthSERVO_1, widthSERVO_2, widthSERVO_3, widthMOTOR_MAIN, widthTHR
 
 float minFrequency = 100, maxFrequency = 500;
 
-float minSERVO = 0.32187, maxSERVO = 0.88;
+float minSERVO = 0.32, maxSERVO = 0.88;
 float minMOTOR = 0.4, maxMOTOR = 0.88;
-float minTHROTLE = 0.4, maxTHROTLE = 0.88;
+float minTHROTLE = 0.32, maxTHROTLE = 0.88;
 float servoAngle1 = 0.f/180.f*PI, servoAngle2 = 120.f/180.f*PI, servoAngle3 = 240.f/180.f*PI;
 float servoR1 = 1, servoR2 = 1, servoR3 = 1;
 float servo1Nominal = 0.47652, servo2Nominal = 0.47931, servo3Nominal = 0.47848;
 static float sinS[4]={0,0,0,0};
 static float cosS[4]={0,0,0,0};
+
+static int32_t spiAngle32 = 0, oldRotorAngle = 0, veryLowSpeedCounter = 0;
+static float rotorRPM = 0;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -220,7 +223,7 @@ int main(void)
   int32_t avgSpeed = 0;
   int32_t ampSpeed = 0;
   int32_t phase = 0;
-  int32_t spiAngle32 = 0;
+
   uint16_t totalSpeed = 0;
   int32_t delta = 0;
   uint8_t debugRes = 0;
@@ -230,7 +233,7 @@ int main(void)
   
   DebugScopeStartWrite(&debugData);
   // HAL_ADC_Start_DMA(&hadc1, aADCxConvertedData, ADC_CONVERTED_DATA_BUFFER_SIZE);
-  HAL_TIM_Base_Start(&htim6);
+  LL_TIM_EnableCounter(TIM6);
 
   LL_TIM_EnableCounter(TIM1);
   LL_TIM_EnableCounter(TIM2);
@@ -248,7 +251,7 @@ int main(void)
     motorMainCommand = min(motorMainCommand, 1);
     motorMainCommand = max(motorMainCommand, 0);
 
-    throtleCommand = (widthTHROTLE-minMOTOR)/(maxTHROTLE-minTHROTLE);
+    throtleCommand = (widthTHROTLE-minTHROTLE)/(maxTHROTLE-minTHROTLE);
     throtleCommand = min(throtleCommand, 1);
     throtleCommand = max(throtleCommand, 0);
     float A, B, C, D;
@@ -257,26 +260,42 @@ int main(void)
     float heading = atan2_m(B, A);
     //float inclination = acos(C);
     float inclination = acos_nvidia(C);
-    float collective = -D;
-    
-    if (motorMainCommand < 0.5)
+    float collective = throtleCommand;//-D;
+
+    if (throtleCommand < 0.05 || motorMainCommand < 0.5)
     {
       totalSpeed = 0;
       dshot_send(&totalSpeed);
       HAL_Delay(1);
       continue;
     }
+    else if (rotorRPM < 10)  // if the rotor is not spinning, stop the motor
+    {
+      veryLowSpeedCounter++;
+      if (veryLowSpeedCounter > 1000)
+      {
+        totalSpeed = 0;
+        dshot_send(&totalSpeed);
+        HAL_Delay(10000);
+        veryLowSpeedCounter = 0;
+        continue;
+      }
+    }
+    else
+    {
+      veryLowSpeedCounter = 0;
+    }
       
-    avgSpeed = (collective-0.5)/(0.72-0.5)*2000;
+    avgSpeed = collective*2000.;
     avgSpeed = (avgSpeed>1950)?2000:avgSpeed;
     avgSpeed = (avgSpeed<50)?0:avgSpeed;
     // if (AVGSPEED_Voltage > 50)
     //   avgSpeed = VoltageToAVGSpeed(AVGSPEED_Voltage);
 
-    ampSpeed = inclination/0.40f*100;//
+    ampSpeed = inclination/0.54f*100;//
     ampSpeed = (ampSpeed > 80)?100:ampSpeed;
     ampSpeed = (ampSpeed < 5)?0:ampSpeed;
-    ampSpeed = ampSpeed*avgSpeed*1/4/100;
+    ampSpeed = ampSpeed*avgSpeed*1/2/100;
     // avgSpeed = (avgSpeed<50)?0:avgSpeed;
 
     // if (AMPSPEED_Voltage > 50)
@@ -288,7 +307,7 @@ int main(void)
 
     errorFlag[7] = AS5047D_Read(  AS5047_CS_GPIO_Port,   AS5047_CS_Pin, AS5047D_ANGLECOM, &ANGLECOM);
     spiAngle32 = ANGLECOM * 360 / 16384;
-    errorFlag[15] = AS5047D_Get_True_Angle_Value(&spiAngle);
+    // errorFlag[15] = AS5047D_Get_True_Angle_Value(&spiAngle);
     if (errorFlag[7] != 0)
     {
       errorFlag[16] = AS5047D_Read(AS5047_CS_GPIO_Port, AS5047_CS_Pin, AS5047D_ERRFL, &ERRFL);
@@ -367,6 +386,13 @@ void SystemClock_Config(void)
 }
 
 /* USER CODE BEGIN 4 */
+void updateRotorSpeed()
+{
+  const float freq = ((float)(TIMCLOCK)/(TIM6->PSC+1)/(TIM6->ARR+1));
+  rotorRPM = fabsf((oldRotorAngle - spiAngle32)/360.f*freq*60);
+  oldRotorAngle = spiAngle32;
+}
+
 uint8_t calculateFreqAndWidth(const circ_buf_t *riseData, const circ_buf_t *fallData, const float period, float *frequency, float *width)
 {
   if (!circ_buf_is_full(riseData) || !circ_buf_is_full(fallData))
