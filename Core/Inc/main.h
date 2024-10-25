@@ -130,6 +130,7 @@ void Error_Handler(void);
 #define min(a,b) ((a) < (b) ? (a) : (b))
 #define max(a,b) ((a) > (b) ? (a) : (b))
 
+void updateRotorSpeed();
 /* USER CODE END Private defines */
 
 #ifdef __cplusplus
