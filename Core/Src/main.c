@@ -115,8 +115,10 @@ float servoR1 = 1, servoR2 = 1, servoR3 = 1;
 float servo1Nominal = 0.47652, servo2Nominal = 0.47931, servo3Nominal = 0.47848;
 static float sinS[4]={0,0,0,0};
 static float cosS[4]={0,0,0,0};
+float latFac=-1.f, lonFac=-1.f;
 
 static int32_t spiAngle32 = 0, oldRotorAngle = 0, veryLowSpeedCounter = 0;
+static int32_t magneticPhaseOffset = -60; // phase offset due to arbitrary azimuth of magnet on the motor 
 static float rotorRPM = 0;
 /* USER CODE END PV */
 
@@ -295,7 +297,7 @@ int main(void)
     ampSpeed = inclination/0.54f*100;//
     ampSpeed = (ampSpeed > 80)?100:ampSpeed;
     ampSpeed = (ampSpeed < 5)?0:ampSpeed;
-    ampSpeed = ampSpeed*avgSpeed*1/2/100;
+    ampSpeed = ampSpeed*avgSpeed*3*1/2/100/2;
     // avgSpeed = (avgSpeed<50)?0:avgSpeed;
 
     // if (AMPSPEED_Voltage > 50)
@@ -314,7 +316,7 @@ int main(void)
       continue;
     }
 
-    delta = ampSpeed*sine_m(spiAngle32 + phase);
+    delta = ampSpeed*sine_m(spiAngle32 + phase + magneticPhaseOffset);
     totalSpeed = avgSpeed + delta;
 
     totalSpeed = min(totalSpeed, 2000);
@@ -444,8 +446,8 @@ void servo2planeABCD(const float servo1, const float servo2, const float servo3,
 
   Vector n={.x=v1.y*v2.z-v1.z*v2.y, .y=v1.z*v2.x-v1.x*v2.z, .z=v1.x*v2.y-v1.y*v2.x};
   float norminv = 1./sqrt(n.x*n.x+n.y*n.y+n.z*n.z);
-  n.x = n.x*norminv;
-  n.y = n.y*norminv;
+  n.x = n.x*norminv*lonFac;
+  n.y = n.y*norminv*latFac;
   n.z = n.z*norminv;
   *D = -(n.x*p1.x+n.y*p1.y+n.z*p1.z);
   *A = n.x;

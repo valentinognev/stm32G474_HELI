@@ -110,7 +110,8 @@ static void dshot_start_pwm()
   if (HAL_TIM_PWM_Start_DMA(&MOTOR1_TIM, MOTOR_1_TIM_CHANNEL, (uint32_t)motor1_dmabuffer, DSHOT_DMA_BUFFER_SIZE))
   {
     /* Starting Error */
-    Error_Handler();
+    // Error_Handler();
+    HAL_Delay(500);
   }
 //   HAL_TIM_PWM_Start(MOTOR_2_TIM, MOTOR_2_TIM_CHANNEL);
 //   HAL_TIM_PWM_Start(MOTOR_3_TIM, MOTOR_3_TIM_CHANNEL);
