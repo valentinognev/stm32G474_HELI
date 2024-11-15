@@ -18,12 +18,11 @@
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
-#include "adc.h"
 #include "cordic.h"
 #include "dma.h"
 #include "spi.h"
 #include "tim.h"
-#include "usb_device.h"
+#include "usb.h"
 #include "gpio.h"
 
 /* Private includes ----------------------------------------------------------*/
@@ -34,6 +33,7 @@
 #include "debug_scope.h"
 #include "mathutils.h"
 #include "dshot.h"
+#include "circBuffer.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -102,26 +102,24 @@ __IO uint32_t PHASE_Voltage = 0;        /* Value of voltage on GPIO pin (on whic
 __IO uint32_t AVGSPEED_Voltage = 0;        /* Value of voltage on GPIO pin (on which is mapped ADC channel) calculated from ADC conversion data (unit: mV) */
 __IO uint32_t AMPSPEED_Voltage = 0;        /* Value of voltage on GPIO pin (on which is mapped ADC channel) calculated from ADC conversion data (unit: mV) */
 
-extern float frequencySERVO_1, frequencySERVO_2, frequencySERVO_3, frequencyMOTOR_MAIN, frequencyMOTOR_TAIL;
-extern float widthSERVO_1, widthSERVO_2, widthSERVO_3, widthMOTOR_MAIN, widthMOTOR_TAIL;
-extern uint32_t riseDataSERVO_1[PWMNUMVAL], fallDataSERVO_1[PWMNUMVAL];
-extern uint32_t riseDataSERVO_2[PWMNUMVAL], fallDataSERVO_2[PWMNUMVAL];
-extern uint32_t riseDataSERVO_3[PWMNUMVAL], fallDataSERVO_3[PWMNUMVAL];
-extern uint32_t riseDataMOTOR_MAIN[PWMNUMVAL], fallDataMOTOR_MAIN[PWMNUMVAL];
-extern uint32_t riseDataMOTOR_TAIL[PWMNUMVAL], fallDataMOTOR_TAIL[PWMNUMVAL];
-extern uint32_t riseDatatemp[PWMNUMVAL], fallDatatemp[PWMNUMVAL];
+extern float frequencySERVO_1, frequencySERVO_2, frequencySERVO_3, frequencyMOTOR_MAIN, frequencyTHROTLE;
+extern float widthSERVO_1, widthSERVO_2, widthSERVO_3, widthMOTOR_MAIN, widthTHROTLE;
 
 float minFrequency = 100, maxFrequency = 500;
-extern uint8_t isMeasuredSERVO_1, isMeasuredSERVO_2, isMeasuredSERVO_3;
-extern uint8_t isMeasuredMOTOR_MAIN, isMeasuredMOTOR_TAIL;
 
-float minSERVO = 0.32187, maxSERVO = 0.88;
+float minSERVO = 0.32, maxSERVO = 0.88;
 float minMOTOR = 0.4, maxMOTOR = 0.88;
+float minTHROTLE = 0.32, maxTHROTLE = 0.88;
 float servoAngle1 = 0.f/180.f*PI, servoAngle2 = 120.f/180.f*PI, servoAngle3 = 240.f/180.f*PI;
 float servoR1 = 1, servoR2 = 1, servoR3 = 1;
 float servo1Nominal = 0.47652, servo2Nominal = 0.47931, servo3Nominal = 0.47848;
 static float sinS[4]={0,0,0,0};
 static float cosS[4]={0,0,0,0};
+float latFac=-1.f, lonFac=-1.f;
+
+static int32_t spiAngle32 = 0, oldRotorAngle = 0, veryLowSpeedCounter = 0;
+static int32_t magneticPhaseOffset = -60; // phase offset due to arbitrary azimuth of magnet on the motor 
+static float rotorRPM = 0;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -132,6 +130,7 @@ uint16_t VoltageToAmpSpeed(const uint16_t voltage, const uint16_t curspeed);
 uint16_t VoltageToPhase(const uint16_t voltage);
 void servo2planeABCD(const float servo1, const float servo2, const float servo3, 
                       float *A, float *B, float *C, float *D);
+uint8_t calculateFreqAndWidth(const circ_buf_t *riseData, const circ_buf_t *fallData, const float period, float *frequency, float *width);
 
 /* USER CODE END PFP */
 
@@ -183,14 +182,12 @@ int main(void)
   MX_TIM1_Init();
   MX_TIM2_Init();
   MX_TIM3_Init();
-  MX_TIM4_Init();
-  MX_TIM5_Init();
   MX_TIM6_Init();
-  MX_USB_Device_Init();
-  MX_ADC1_Init();
   MX_CORDIC_Init();
   MX_TIM15_Init();
+  MX_USB_PCD_Init();
   /* USER CODE BEGIN 2 */
+
    /* Initiaize AS5047D */
   uint16_t nop,AGC;
 
@@ -228,86 +225,79 @@ int main(void)
   int32_t avgSpeed = 0;
   int32_t ampSpeed = 0;
   int32_t phase = 0;
-  int32_t spiAngle32 = 0;
+
   uint16_t totalSpeed = 0;
   int32_t delta = 0;
   uint8_t debugRes = 0;
   float data[DEBUGSCOPENUMOFCH] = {0.0f, 0.0f};
   float servo1Command =0, servo2Command = 0, servo3Command = 0;
-  float motorMainCommand = 0, motorTailCommand = 0;
+  float motorMainCommand = 0, throtleCommand = 0;
   
   DebugScopeStartWrite(&debugData);
   // HAL_ADC_Start_DMA(&hadc1, aADCxConvertedData, ADC_CONVERTED_DATA_BUFFER_SIZE);
-  HAL_TIM_Base_Start(&htim6);
-  /*## Start PWM signal generation in DMA mode ############################*/ 
+  LL_TIM_EnableCounter(TIM6);
+
+  LL_TIM_EnableCounter(TIM1);
+  LL_TIM_EnableCounter(TIM2);
+  LL_TIM_EnableCounter(TIM3);
+  LL_TIM_EnableCounter(TIM4);
+   /*## Start PWM signal generation in DMA mode ############################*/ 
   while (1)
   {
-    HAL_StatusTypeDef status1 = HAL_TIM_IC_Start_DMA(&htim1, TIM_CHANNEL_1, riseDataSERVO_1, PWMNUMVAL);
-    HAL_StatusTypeDef status2 = HAL_TIM_IC_Start_DMA(&htim1, TIM_CHANNEL_2, fallDataSERVO_1, PWMNUMVAL);
-    HAL_StatusTypeDef status3 = HAL_TIM_IC_Start_DMA(&htim2, TIM_CHANNEL_1, riseDataSERVO_2, PWMNUMVAL);
-    HAL_StatusTypeDef status4 = HAL_TIM_IC_Start_DMA(&htim2, TIM_CHANNEL_2, fallDataSERVO_2, PWMNUMVAL);
-    HAL_StatusTypeDef status5 = HAL_TIM_IC_Start_DMA(&htim3, TIM_CHANNEL_1, riseDataSERVO_3, PWMNUMVAL);
-    HAL_StatusTypeDef status6 = HAL_TIM_IC_Start_DMA(&htim3, TIM_CHANNEL_2, fallDataSERVO_3, PWMNUMVAL);
-    HAL_StatusTypeDef status7 = HAL_TIM_IC_Start_DMA(&htim4, TIM_CHANNEL_1, riseDataMOTOR_MAIN, PWMNUMVAL);
-    HAL_StatusTypeDef status8 = HAL_TIM_IC_Start_DMA(&htim4, TIM_CHANNEL_2, fallDataMOTOR_MAIN, PWMNUMVAL);
-    HAL_StatusTypeDef status9 = HAL_TIM_IC_Start_DMA(&htim5, TIM_CHANNEL_1, riseDataMOTOR_TAIL, PWMNUMVAL);
-    HAL_StatusTypeDef status10 = HAL_TIM_IC_Start_DMA(&htim5, TIM_CHANNEL_2, fallDataMOTOR_TAIL, PWMNUMVAL);
+    float period = 1.f/(TIMCLOCK/TIM2->PSC);;
+    servo1Command = (widthSERVO_1-minSERVO)/(maxSERVO-minSERVO);//-servo1Nominal;
+    servo2Command = (widthSERVO_2-minSERVO)/(maxSERVO-minSERVO);//-servo2Nominal;
+    servo3Command = (widthSERVO_3-minSERVO)/(maxSERVO-minSERVO);//-servo3Nominal;
 
-    if (isMeasuredSERVO_1 == 1)    
-    {
-      servo1Command = (widthSERVO_1-minSERVO)/(maxSERVO-minSERVO);//-servo1Nominal;
-      isMeasuredSERVO_1 = 0;
-    }
-    if (isMeasuredSERVO_2 == 1)
-    {
-      servo2Command = (widthSERVO_2-minSERVO)/(maxSERVO-minSERVO);//-servo2Nominal;
-      isMeasuredSERVO_2 = 0;
-    }
-    if (isMeasuredSERVO_3 == 1)
-    {
-      isMeasuredSERVO_3 = 0;
-      servo3Command = (widthSERVO_3-minSERVO)/(maxSERVO-minSERVO);//-servo3Nominal;
-    }
-    if (isMeasuredMOTOR_MAIN == 1)
-    {
-      motorMainCommand = (widthMOTOR_MAIN-minMOTOR)/(maxMOTOR-minMOTOR);
-      motorMainCommand = min(motorMainCommand, 1);
-      motorMainCommand = max(motorMainCommand, 0);
-      isMeasuredMOTOR_MAIN == 0;
-    }
-    if (isMeasuredMOTOR_TAIL == 1)
-    {
-      motorTailCommand = (widthMOTOR_TAIL-minMOTOR)/(maxMOTOR-minMOTOR);
-      motorTailCommand = min(motorTailCommand, 1);
-      motorTailCommand = max(motorTailCommand, 0);
-      isMeasuredMOTOR_TAIL = 0;
-    }
+    motorMainCommand = (widthMOTOR_MAIN-minMOTOR)/(maxMOTOR-minMOTOR);
+    motorMainCommand = min(motorMainCommand, 1);
+    motorMainCommand = max(motorMainCommand, 0);
+
+    throtleCommand = (widthTHROTLE-minTHROTLE)/(maxTHROTLE-minTHROTLE);
+    throtleCommand = min(throtleCommand, 1);
+    throtleCommand = max(throtleCommand, 0);
     float A, B, C, D;
     servo2planeABCD(servo1Command, servo2Command, servo3Command, &A, &B, &C, &D);
     //float heading = atan2f(B, A);
     float heading = atan2_m(B, A);
     //float inclination = acos(C);
     float inclination = acos_nvidia(C);
-    float collective = -D;
-    
-    if (motorMainCommand < 0.5)
+    float collective = throtleCommand;//-D;
+
+    if (throtleCommand < 0.05 || motorMainCommand < 0.5)
     {
       totalSpeed = 0;
       dshot_send(&totalSpeed);
       HAL_Delay(1);
       continue;
     }
+    else if (rotorRPM < 10)  // if the rotor is not spinning, stop the motor
+    {
+      veryLowSpeedCounter++;
+      if (veryLowSpeedCounter > 1000)
+      {
+        totalSpeed = 0;
+        dshot_send(&totalSpeed);
+        HAL_Delay(10000);
+        veryLowSpeedCounter = 0;
+        continue;
+      }
+    }
+    else
+    {
+      veryLowSpeedCounter = 0;
+    }
       
-    avgSpeed = (collective-0.5)/(0.72-0.5)*2000;
+    avgSpeed = collective*2000.;
     avgSpeed = (avgSpeed>1950)?2000:avgSpeed;
     avgSpeed = (avgSpeed<50)?0:avgSpeed;
     // if (AVGSPEED_Voltage > 50)
     //   avgSpeed = VoltageToAVGSpeed(AVGSPEED_Voltage);
 
-    ampSpeed = inclination/0.40f*100;//
+    ampSpeed = inclination/0.54f*100;//
     ampSpeed = (ampSpeed > 80)?100:ampSpeed;
     ampSpeed = (ampSpeed < 5)?0:ampSpeed;
-    ampSpeed = ampSpeed*avgSpeed*1/4/100;
+    ampSpeed = ampSpeed*avgSpeed*3*1/2/100/2;
     // avgSpeed = (avgSpeed<50)?0:avgSpeed;
 
     // if (AMPSPEED_Voltage > 50)
@@ -326,7 +316,7 @@ int main(void)
       continue;
     }
 
-    delta = ampSpeed*sine_m(spiAngle32 + phase);
+    delta = ampSpeed*sine_m(spiAngle32 + phase + magneticPhaseOffset);
     totalSpeed = avgSpeed + delta;
 
     totalSpeed = min(totalSpeed, 2000);
@@ -366,15 +356,16 @@ void SystemClock_Config(void)
   /** Initializes the RCC Oscillators according to the specified parameters
   * in the RCC_OscInitTypeDef structure.
   */
-  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSI48|RCC_OSCILLATORTYPE_HSE;
-  RCC_OscInitStruct.HSEState = RCC_HSE_ON;
+  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSI|RCC_OSCILLATORTYPE_HSI48;
+  RCC_OscInitStruct.HSIState = RCC_HSI_ON;
+  RCC_OscInitStruct.HSICalibrationValue = RCC_HSICALIBRATION_DEFAULT;
   RCC_OscInitStruct.HSI48State = RCC_HSI48_ON;
   RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
-  RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSE;
-  RCC_OscInitStruct.PLL.PLLM = RCC_PLLM_DIV2;
+  RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSI;
+  RCC_OscInitStruct.PLL.PLLM = RCC_PLLM_DIV4;
   RCC_OscInitStruct.PLL.PLLN = 85;
   RCC_OscInitStruct.PLL.PLLP = RCC_PLLP_DIV2;
-  RCC_OscInitStruct.PLL.PLLQ = RCC_PLLQ_DIV2;
+  RCC_OscInitStruct.PLL.PLLQ = RCC_PLLQ_DIV4;
   RCC_OscInitStruct.PLL.PLLR = RCC_PLLR_DIV2;
   if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)
   {
@@ -397,6 +388,37 @@ void SystemClock_Config(void)
 }
 
 /* USER CODE BEGIN 4 */
+void updateRotorSpeed()
+{
+  const float freq = ((float)(TIMCLOCK)/(TIM6->PSC+1)/(TIM6->ARR+1));
+  rotorRPM = fabsf((oldRotorAngle - spiAngle32)/360.f*freq*60);
+  oldRotorAngle = spiAngle32;
+}
+
+uint8_t calculateFreqAndWidth(const circ_buf_t *riseData, const circ_buf_t *fallData, const float period, float *frequency, float *width)
+{
+  if (!circ_buf_is_full(riseData) || !circ_buf_is_full(fallData))
+    return 0;
+
+  scalarMeasurement_t riseDataLast, fallDataLast;
+  circ_buf_last(riseData, &riseDataLast);
+  circ_buf_last(fallData, &fallDataLast);
+
+  scalarMeasurement_t riseDataFirst, fallDataFirst;
+  circ_buf_first(riseData, &riseDataFirst);
+  circ_buf_first(fallData, &fallDataFirst);
+
+  float ticks = (riseDataFirst-riseDataLast)/(riseData->circBufferLen-1);
+  *frequency = 1.f/(ticks*period);
+  if (fallDataLast < riseDataLast)
+    *width = 1.0f-(fallDataLast-riseDataLast)/ticks;
+  else
+    *width = (fallDataLast-riseDataLast)/ticks;
+
+
+  return 1;
+}
+
 uint16_t VoltageToAVGSpeed(const uint16_t voltage)
 {
   return (uint16_t) ((uint32_t)(voltage - MINVOLTAGE) * (MAXSPEED - MINSPEED)/(MAXVOLTAGE - MINVOLTAGE) + MINSPEED);
@@ -412,19 +434,6 @@ uint16_t VoltageToPhase(const uint16_t voltage)
   return (uint16_t)((uint32_t)(voltage - MINVOLTAGE)* 360 /(MAXVOLTAGE - MINVOLTAGE)) ;
 }
 
-void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc)
-{
-    // Conversion Complete & DMA Transfer Complete As Well
-    // So The AD_RES_BUFFER Is Now Updated & Let's Move Values To The PWM CCRx
-    // Update The PWM Channels With Latest ADC Scan Conversion Results
-    // PHASE_Voltage = aADCxConvertedData[0];  // ADC CH6 -> PWM CH1
-    // AVGSPEED_Voltage = aADCxConvertedData[1];  // ADC CH7 -> PWM CH2
-    // AMPSPEED_Voltage = aADCxConvertedData[2];  // ADC CH8 -> PWM CH3
-  AVGSPEED_Voltage     = __HAL_ADC_CALC_DATA_TO_VOLTAGE(VDDA_APPLI, aADCxConvertedData[0], LL_ADC_RESOLUTION_12B);
-  AMPSPEED_Voltage     = __HAL_ADC_CALC_DATA_TO_VOLTAGE(VDDA_APPLI, aADCxConvertedData[1], LL_ADC_RESOLUTION_12B);
-  PHASE_Voltage        = __HAL_ADC_CALC_DATA_TO_VOLTAGE(VDDA_APPLI, aADCxConvertedData[2], LL_ADC_RESOLUTION_12B);
-}
-
 void servo2planeABCD(const float servo1, const float servo2, const float servo3, 
                       float *A, float *B, float *C, float *D)
 {
@@ -437,8 +446,8 @@ void servo2planeABCD(const float servo1, const float servo2, const float servo3,
 
   Vector n={.x=v1.y*v2.z-v1.z*v2.y, .y=v1.z*v2.x-v1.x*v2.z, .z=v1.x*v2.y-v1.y*v2.x};
   float norminv = 1./sqrt(n.x*n.x+n.y*n.y+n.z*n.z);
-  n.x = n.x*norminv;
-  n.y = n.y*norminv;
+  n.x = n.x*norminv*lonFac;
+  n.y = n.y*norminv*latFac;
   n.z = n.z*norminv;
   *D = -(n.x*p1.x+n.y*p1.y+n.z*p1.z);
   *A = n.x;

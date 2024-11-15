@@ -1,9 +1,9 @@
 /* USER CODE BEGIN Header */
 /**
   ******************************************************************************
-  * @file    adc.h
+  * @file    usb.h
   * @brief   This file contains all the function prototypes for
-  *          the adc.c file
+  *          the usb.c file
   ******************************************************************************
   * @attention
   *
@@ -18,8 +18,8 @@
   */
 /* USER CODE END Header */
 /* Define to prevent recursive inclusion -------------------------------------*/
-#ifndef __ADC_H__
-#define __ADC_H__
+#ifndef __USB_H__
+#define __USB_H__
 
 #ifdef __cplusplus
 extern "C" {
@@ -32,25 +32,21 @@ extern "C" {
 
 /* USER CODE END Includes */
 
-extern ADC_HandleTypeDef hadc1;
+extern PCD_HandleTypeDef hpcd_USB_FS;
 
 /* USER CODE BEGIN Private defines */
 
 /* USER CODE END Private defines */
 
-void MX_ADC1_Init(void);
+void MX_USB_PCD_Init(void);
 
 /* USER CODE BEGIN Prototypes */
-void Activate_ADC(void);
-void AdcDmaTransferComplete_Callback();
-void AdcDmaTransferError_Callback();
-void AdcGrpRegularSequenceConvComplete_Callback();
-void AdcGrpRegularOverrunError_Callback(void);
+
 /* USER CODE END Prototypes */
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif /* __ADC_H__ */
+#endif /* __USB_H__ */
 

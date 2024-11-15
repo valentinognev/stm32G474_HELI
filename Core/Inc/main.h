@@ -29,6 +29,18 @@ extern "C" {
 /* Includes ------------------------------------------------------------------*/
 #include "stm32g4xx_hal.h"
 
+#include "stm32g4xx_ll_tim.h"
+#include "stm32g4xx_ll_bus.h"
+#include "stm32g4xx_ll_cortex.h"
+#include "stm32g4xx_ll_rcc.h"
+#include "stm32g4xx_ll_system.h"
+#include "stm32g4xx_ll_utils.h"
+#include "stm32g4xx_ll_pwr.h"
+#include "stm32g4xx_ll_gpio.h"
+#include "stm32g4xx_ll_dma.h"
+
+#include "stm32g4xx_ll_exti.h"
+
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include "stm32g474xx.h"
@@ -44,7 +56,6 @@ extern "C" {
 
 #include "stm32g4xx_ll_exti.h"
 #include "stm32g4xx_ll_spi.h"
-#include "stm32g4xx_ll_adc.h"
 #include "stm32g4xx_ll_tim.h"
 /* USER CODE END Includes */
 
@@ -71,19 +82,17 @@ void Error_Handler(void);
 /* USER CODE END EFP */
 
 /* Private defines -----------------------------------------------------------*/
+#define PSCALERSERVO 100
+#define PSCALERMOTOR 100
 #define PSCALERSERVO_3 100
-#define PSCALERSERVO_1 100
 #define PSCALERSERVO_2 100
-#define PSCALERMOTOR_TAIL 100
-#define PSCALERMOTOR_MAIN 100
-#define SERVO_2_Pin GPIO_PIN_0
-#define SERVO_2_GPIO_Port GPIOA
-#define AVGSPEEED_Pin GPIO_PIN_1
-#define AVGSPEEED_GPIO_Port GPIOA
-#define AMPSPEED_Pin GPIO_PIN_2
-#define AMPSPEED_GPIO_Port GPIOA
-#define PHASE_Pin GPIO_PIN_3
-#define PHASE_GPIO_Port GPIOA
+#define PSCALERTHROTLE 100
+#define THROTLE_Pin GPIO_PIN_0
+#define THROTLE_GPIO_Port GPIOA
+#define PITCH_Pin GPIO_PIN_2
+#define PITCH_GPIO_Port GPIOA
+#define ROLL_Pin GPIO_PIN_3
+#define ROLL_GPIO_Port GPIOA
 #define AS5047_CS_Pin GPIO_PIN_4
 #define AS5047_CS_GPIO_Port GPIOA
 #define AS5047_SCK_Pin GPIO_PIN_5
@@ -92,18 +101,20 @@ void Error_Handler(void);
 #define AS5047_MISO_GPIO_Port GPIOA
 #define AS5047_MOSI_Pin GPIO_PIN_7
 #define AS5047_MOSI_GPIO_Port GPIOA
-#define MOTOR_TAIL_Pin GPIO_PIN_2
-#define MOTOR_TAIL_GPIO_Port GPIOB
+#define SERVO2_Pin GPIO_PIN_0
+#define SERVO2_GPIO_Port GPIOB
+#define SERVO3_Pin GPIO_PIN_1
+#define SERVO3_GPIO_Port GPIOB
 #define DSHOT_Pin GPIO_PIN_14
 #define DSHOT_GPIO_Port GPIOB
-#define SERVO_3_Pin GPIO_PIN_6
-#define SERVO_3_GPIO_Port GPIOC
-#define SERVO_1_Pin GPIO_PIN_8
-#define SERVO_1_GPIO_Port GPIOA
+#define SERVO1_Pin GPIO_PIN_6
+#define SERVO1_GPIO_Port GPIOC
+#define ROTORMAIN_Pin GPIO_PIN_8
+#define ROTORMAIN_GPIO_Port GPIOA
+#define ROTORTAIL_Pin GPIO_PIN_10
+#define ROTORTAIL_GPIO_Port GPIOA
 #define AS5047_NSS_Pin GPIO_PIN_15
 #define AS5047_NSS_GPIO_Port GPIOA
-#define MOTOR_MAIN_Pin GPIO_PIN_6
-#define MOTOR_MAIN_GPIO_Port GPIOB
 
 /* USER CODE BEGIN Private defines */
 #define INTERNAL_TEMPSENSOR_AVGSLOPE   ((int32_t) 2500)        /* Internal temperature sensor, parameter Avg_Slope (unit: uV/DegCelsius). Refer to device datasheet for min/typ/max values. */
@@ -121,6 +132,7 @@ void Error_Handler(void);
 #define min(a,b) ((a) < (b) ? (a) : (b))
 #define max(a,b) ((a) > (b) ? (a) : (b))
 
+void updateRotorSpeed();
 /* USER CODE END Private defines */
 
 #ifdef __cplusplus

@@ -20,7 +20,6 @@
 #define MOTOR_BIT_0           7
 #define MOTOR_BIT_1           14
 #define MOTOR_BITLENGTH       20
-#define DSHOT_FRAME_SIZE      18
 
 // Timer Clock
 #define TIMER_CLOCK				170000000	// 170MHz
@@ -43,7 +42,6 @@
 
 
 /* Definition */
-#define DSHOT_FRAME_SIZE       	16
 #define DSHOT_DMA_BUFFER_SIZE   18 /* resolution + frame reset (2us) */
 
 #define DSHOT_MIN_THROTTLE      48

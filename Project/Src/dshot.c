@@ -33,18 +33,14 @@ static uint32_t motor1_dmabuffer[DSHOT_DMA_BUFFER_SIZE];
 
 /* Static functions */
 // dshot init
-static uint32_t dshot_choose_type(dshot_type_e dshot_type);
+static void dshot_choose_type(dshot_type_e dshot_type);
 static void dshot_set_timer(dshot_type_e dshot_type);
-static void dshot_dma_tc_callback(DMA_HandleTypeDef *hdma);
-static void dshot_put_tc_callback_function();
 static void dshot_start_pwm();
 
 // dshot write
 static uint16_t dshot_prepare_packet(uint16_t value);
 static void dshot_prepare_dmabuffer(uint32_t* motor_dmabuffer, uint16_t value);
 static void dshot_prepare_dmabuffer_all();
-static void dshot_dma_start();
-static void dshot_enable_dma_request();
 
 static uint16_t motorBitLength = 0;
 static uint16_t motorBit0 = 0;
@@ -65,7 +61,7 @@ void dshot_send(uint16_t* motor_value)
 
 
 /* Static functions */
-static uint32_t dshot_choose_type(dshot_type_e dshot_type)
+static void dshot_choose_type(dshot_type_e dshot_type)
 {
   switch (dshot_type)
   {
@@ -88,8 +84,7 @@ static uint32_t dshot_choose_type(dshot_type_e dshot_type)
 
 static void dshot_set_timer(dshot_type_e dshot_type)
 {
-  uint16_t dshot_prescaler;
-  uint32_t timer_clock = TIMER_CLOCK; // all timer clock is same as SystemCoreClock in stm32f411
+  // uint16_t dshot_prescaler;
 
    // motor1
   __HAL_TIM_SET_PRESCALER(&MOTOR1_TIM, 0);
@@ -115,7 +110,8 @@ static void dshot_start_pwm()
   if (HAL_TIM_PWM_Start_DMA(&MOTOR1_TIM, MOTOR_1_TIM_CHANNEL, (uint32_t)motor1_dmabuffer, DSHOT_DMA_BUFFER_SIZE))
   {
     /* Starting Error */
-    Error_Handler();
+    // Error_Handler();
+    HAL_Delay(500);
   }
 //   HAL_TIM_PWM_Start(MOTOR_2_TIM, MOTOR_2_TIM_CHANNEL);
 //   HAL_TIM_PWM_Start(MOTOR_3_TIM, MOTOR_3_TIM_CHANNEL);
