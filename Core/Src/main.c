@@ -253,6 +253,8 @@ int main(void)
     motorMainCommand = min(motorMainCommand, 1);
     motorMainCommand = max(motorMainCommand, 0);
 
+    if isnan(widthTHROTLE)
+        widthTHROTLE = minTHROTLE;
     throtleCommand = (widthTHROTLE-minTHROTLE)/(maxTHROTLE-minTHROTLE);
     throtleCommand = min(throtleCommand, 1);
     throtleCommand = max(throtleCommand, 0);

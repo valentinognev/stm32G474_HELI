@@ -500,28 +500,32 @@ void HAL_TIM_Base_MspDeInit(TIM_HandleTypeDef* tim_baseHandle)
 /////////////////////////////////////////////////////////////////////
 void TIM_PeriodElapsedCallback(TIM_TypeDef *htim)
 {
+  uint16_t denom = 0;
   if (htim == TIM1)
   {
-    frequencyMOTOR_MAIN = ((float)(TIMCLOCK)/(TIM1->PSC+1))/(TIM1->CCR1);
+    float denom = TIM1->CCR1;
+    frequencyMOTOR_MAIN = ((float)(TIMCLOCK)/(TIM1->PSC+1))/denom;
     frequencyMOTOR_TAIL = frequencyMOTOR_MAIN;
-    widthMOTOR_MAIN = (float)(TIM1->CCR2)/(float)(TIM2->CCR1);
-    widthMOTOR_TAIL = (float)(TIM1->CCR3)/(float)(TIM2->CCR1);
+    widthMOTOR_MAIN = (float)(TIM1->CCR2)/denom;
+    widthMOTOR_TAIL = (float)(TIM1->CCR3)/denom;
   }
   if (htim == TIM2)
   {
-    frequencyTHROTLE = ((float)(TIMCLOCK)/(TIM2->PSC+1))/(TIM2->CCR1);
+    denom = TIM2->CCR1;
+    frequencyTHROTLE = ((float)(TIMCLOCK)/(TIM2->PSC+1))/denom;
     frequencyPITCH = frequencyROLL = frequencyTHROTLE;
-    widthTHROTLE = (float)(TIM2->CCR2)/(float)(TIM2->CCR1);
-    widthPITCH = (float)(TIM2->CCR3)/(float)(TIM2->CCR1);
-    widthROLL = (float)(TIM2->CCR4)/(float)(TIM2->CCR1);
+    widthTHROTLE = (float)(TIM2->CCR2)/denom;
+    widthPITCH = (float)(TIM2->CCR3)/denom;
+    widthROLL = (float)(TIM2->CCR4)/denom;
   }
   else if (htim == TIM3)
   {
-    frequencySERVO_1 = ((float)(TIMCLOCK)/(TIM3->PSC+1))/(TIM3->CCR1);
+    denom = TIM3->CCR1;
+    frequencySERVO_1 = ((float)(TIMCLOCK)/(TIM3->PSC+1))/denom;
     frequencySERVO_3 = frequencySERVO_2 = frequencySERVO_1;
-    widthSERVO_1 = (float)(TIM3->CCR2)/(float)(TIM3->CCR1);
-    widthSERVO_2 = (float)(TIM3->CCR3)/(float)(TIM3->CCR1);
-    widthSERVO_3 = (float)(TIM3->CCR4)/(float)(TIM3->CCR1);
+    widthSERVO_1 = (float)(TIM3->CCR2)/denom;
+    widthSERVO_2 = (float)(TIM3->CCR3)/denom;
+    widthSERVO_3 = (float)(TIM3->CCR4)/denom;
   }
 }
 
