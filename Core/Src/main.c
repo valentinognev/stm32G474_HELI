@@ -55,6 +55,7 @@
 #define MAXVOLTAGE (3300)
 #define MINSPEED (0)
 #define MAXSPEED (2000)
+#define SERVOCOMMAND (0)
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -103,7 +104,7 @@ __IO uint32_t AVGSPEED_Voltage = 0;        /* Value of voltage on GPIO pin (on w
 __IO uint32_t AMPSPEED_Voltage = 0;        /* Value of voltage on GPIO pin (on which is mapped ADC channel) calculated from ADC conversion data (unit: mV) */
 
 extern float frequencySERVO_1, frequencySERVO_2, frequencySERVO_3, frequencyMOTOR_MAIN, frequencyTHROTLE;
-extern float widthSERVO_1, widthSERVO_2, widthSERVO_3, widthMOTOR_MAIN, widthTHROTLE;
+extern float widthSERVO_1, widthSERVO_2, widthSERVO_3, widthMOTOR_MAIN, widthTHROTLE, widthPITCH, widthROLL;
 
 float minFrequency = 100, maxFrequency = 500;
 
@@ -113,6 +114,10 @@ float minTHROTLE = 0.32, maxTHROTLE = 0.88;
 float servoAngle1 = 0.f/180.f*PI, servoAngle2 = 120.f/180.f*PI, servoAngle3 = 240.f/180.f*PI;
 float servoR1 = 1, servoR2 = 1, servoR3 = 1;
 float servo1Nominal = 0.47652, servo2Nominal = 0.47931, servo3Nominal = 0.47848;
+float pitchCommand = 0, rollCommand = 0;
+
+float minAttwidth = 0.3292, maxAttwidth = 0.8894, zeroAttwidth = 0.6093;
+
 static float sinS[4]={0,0,0,0};
 static float cosS[4]={0,0,0,0};
 
@@ -259,12 +264,37 @@ int main(void)
     throtleCommand = (widthTHROTLE-minTHROTLE)/(maxTHROTLE-minTHROTLE);
     throtleCommand = min(throtleCommand, 1);
     throtleCommand = max(throtleCommand, 0);
-    float A, B, C, D;
-    servo2planeABCD(servo1Command, servo2Command, servo3Command, &A, &B, &C, &D);
-    //float heading = atan2f(B, A);
-    float heading = atan2_m(B, A);
-    //float inclination = acos(C);
-    float inclination = acos_nvidia(C);
+
+    if isnan(widthROLL)
+        widthROLL = zeroAttwidth;
+    rollCommand = (widthROLL-zeroAttwidth)/(maxAttwidth-minAttwidth);
+    rollCommand = min(rollCommand, 1);
+    rollCommand = max(rollCommand, -1);
+
+    if isnan(widthPITCH)
+        widthPITCH = zeroAttwidth;
+    pitchCommand = (widthPITCH-zeroAttwidth)/(maxAttwidth-minAttwidth);
+    pitchCommand = min(pitchCommand, 1);
+    pitchCommand = max(pitchCommand, -1);
+    
+    float heading = 0, inclination = 0;
+    if (SERVOCOMMAND)
+    {
+        float A, B, C, D;
+        servo2planeABCD(servo1Command, servo2Command, servo3Command, &A, &B, &C, &D);
+        //float heading = atan2f(B, A);
+        heading = atan2_m(B, A);
+        //float inclination = acos(C);
+        inclination = acos_nvidia(C);
+    }
+    else
+    {
+        heading = atan2_m(rollCommand*latFac, pitchCommand*lonFac);
+        inclination = pitchCommand*pitchCommand + rollCommand*rollCommand;
+        inclination = sqrt(inclination);
+        inclination = min(inclination, 1);
+    }
+        
     float collective = throtleCommand;//-D;
 
     if (throtleCommand < 0.05 || motorMainCommand < 0.5)
