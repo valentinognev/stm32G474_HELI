@@ -115,11 +115,12 @@ float servoR1 = 1, servoR2 = 1, servoR3 = 1;
 float servo1Nominal = 0.47652, servo2Nominal = 0.47931, servo3Nominal = 0.47848;
 static float sinS[4]={0,0,0,0};
 static float cosS[4]={0,0,0,0};
-float latFac=-1.f, lonFac=-1.f;
 
 static int32_t spiAngle32 = 0, oldRotorAngle = 0, veryLowSpeedCounter = 0;
-static int32_t magneticPhaseOffset = -60; // phase offset due to arbitrary azimuth of magnet on the motor 
 static float rotorRPM = 0;
+
+float latFac=1.f, lonFac=-1.f;
+static int32_t magneticPhaseOffset = -15; // phase angle offset (degrees) due to arbitrary azimuth of magnet on the motor 
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -280,7 +281,7 @@ int main(void)
       {
         totalSpeed = 0;
         dshot_send(&totalSpeed);
-        HAL_Delay(10000);
+        HAL_Delay(3000); //HAL_Delay(10000);
         veryLowSpeedCounter = 0;
         continue;
       }
