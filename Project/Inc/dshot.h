@@ -48,6 +48,8 @@
 #define DSHOT_MAX_THROTTLE     	2047
 #define DSHOT_RANGE 			(DSHOT_MAX_THROTTLE - DSHOT_MIN_THROTTLE)
 
+#define DSHOT_COMMAND_STOP (0)
+#define DSHOT_COMMAND_VELOCITY (47)
 
 /* Enumeration */
 typedef enum
@@ -61,7 +63,7 @@ typedef enum
 
 /* Functions */
 void dshot_init(dshot_type_e dshot_type);
-void dshot_send(uint16_t* motor_value);
+void dshot_send(const uint16_t* motor_value, const uint8_t command);
 
 
 #endif /* __DSHOT_H__ */

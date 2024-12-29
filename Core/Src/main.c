@@ -98,6 +98,7 @@ uint16_t SETTINGS2 = 0;
 
 int32_t timerData = 0;
 float true_angle = 0.0f;
+bool armed = false;
 
 __IO uint32_t PHASE_Voltage = 0;        /* Value of voltage on GPIO pin (on which is mapped ADC channel) calculated from ADC conversion data (unit: mV) */
 __IO uint32_t AVGSPEED_Voltage = 0;        /* Value of voltage on GPIO pin (on which is mapped ADC channel) calculated from ADC conversion data (unit: mV) */
@@ -215,12 +216,6 @@ int main(void)
 
   dshot_init(DSHOT600);
 
-  for (int i = 0; i < 10; i++)
-  {
-    dshot_send(0+0); 
-    HAL_Delay(1);
-  }
-
   //ProjectMain();
   /* USER CODE END 2 */
 
@@ -248,6 +243,14 @@ int main(void)
   LL_TIM_EnableCounter(TIM3);
   LL_TIM_EnableCounter(TIM4);
    /*## Start PWM signal generation in DMA mode ############################*/ 
+  
+  for (int i = 0; i < 320; i++)
+  {
+    int16_t value = 0;
+    dshot_send(&value, DSHOT_COMMAND_STOP); 
+    HAL_Delay(1);
+  }
+
   while (1)
   {
     float period = 1.f/(TIMCLOCK/TIM2->PSC);;
@@ -297,25 +300,49 @@ int main(void)
         
     float collective = throtleCommand;//-D;
 
-    if (throtleCommand < 0.05 || motorMainCommand < 0.5)
+    //if (throtleCommand < 0.05 || motorMainCommand < 0.5)
+    if (motorMainCommand < 0.5)
     {
-      totalSpeed = 0;
-      dshot_send(&totalSpeed);
-      HAL_Delay(1);
-      continue;
+        armed=false;
+        totalSpeed = 0;
+        int16_t value = 0;
+        dshot_send(&value, DSHOT_COMMAND_STOP); 
+        HAL_Delay(1);
+        continue;
     }
     else if (rotorRPM < 10)  // if the rotor is not spinning, stop the motor
     {
-      veryLowSpeedCounter++;
-      if (veryLowSpeedCounter > 1000)
-      {
-        totalSpeed = 0;
-        dshot_send(&totalSpeed);
-        HAL_Delay(3000); //HAL_Delay(10000);
-        veryLowSpeedCounter = 0;
-        continue;
-      }
-    }
+        if (armed)
+        {
+            veryLowSpeedCounter++;
+            if (veryLowSpeedCounter > 1000)
+            {
+                armed=false;
+                totalSpeed = 0;
+                dshot_send(&totalSpeed, DSHOT_COMMAND_STOP);
+                HAL_Delay(3000); //HAL_Delay(10000);
+                veryLowSpeedCounter = 0;
+                continue;
+            }
+        }   
+        else
+        {
+            armed=true;
+            veryLowSpeedCounter = 0;
+            for (int i = 0; i < 320; i++)
+            {
+                int16_t value = 0;
+                dshot_send(&value, DSHOT_COMMAND_STOP); 
+                HAL_Delay(1);
+            }
+            for (int i = 0; i < 320; i++)
+            {
+                int16_t value = 100;
+                dshot_send(&value, DSHOT_COMMAND_STOP); 
+                HAL_Delay(1);
+            }        
+        }        
+    } 
     else
     {
       veryLowSpeedCounter = 0;
@@ -351,11 +378,12 @@ int main(void)
 
     delta = ampSpeed*sine_m(spiAngle32 + phase + magneticPhaseOffset);
     totalSpeed = avgSpeed + delta;
-
+    
+    totalSpeed+=200;
     totalSpeed = min(totalSpeed, 2000);
     totalSpeed = max(totalSpeed, 0);
 
-    dshot_send(&totalSpeed);
+    dshot_send(&totalSpeed, DSHOT_COMMAND_VELOCITY);
 
     data[0] = (float)spiAngle32;
     data[1] = (float)totalSpeed;

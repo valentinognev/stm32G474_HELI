@@ -53,10 +53,23 @@ void dshot_init(dshot_type_e dshot_type)
   dshot_set_timer(dshot_type);
 }
 
-void dshot_send(uint16_t* motor_value)
+void dshot_send(const uint16_t* motor_value, const uint8_t command)
 {
-  dshot_prepare_dmabuffer_all(motor_value);
-  dshot_start_pwm();
+    uint16_t value = motor_value[0];
+    if (command == DSHOT_COMMAND_VELOCITY)
+    {
+        value += DSHOT_COMMAND_VELOCITY;
+    }
+    else if (command == DSHOT_COMMAND_STOP)
+    {
+        value = DSHOT_COMMAND_STOP;
+    }
+    else
+    {
+        value = DSHOT_COMMAND_STOP;
+    }
+    dshot_prepare_dmabuffer_all(&value);
+    dshot_start_pwm();
 }
 
 
