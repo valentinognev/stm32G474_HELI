@@ -56,6 +56,7 @@
 #define MINSPEED (0)
 #define MAXSPEED (2000)
 #define SERVOCOMMAND (0)
+#define MINROTATION  (100)
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -105,12 +106,12 @@ __IO uint32_t AVGSPEED_Voltage = 0;        /* Value of voltage on GPIO pin (on w
 __IO uint32_t AMPSPEED_Voltage = 0;        /* Value of voltage on GPIO pin (on which is mapped ADC channel) calculated from ADC conversion data (unit: mV) */
 
 extern float frequencySERVO_1, frequencySERVO_2, frequencySERVO_3, frequencyMOTOR_MAIN, frequencyTHROTLE;
-extern float widthSERVO_1, widthSERVO_2, widthSERVO_3, widthMOTOR_MAIN, widthTHROTLE, widthPITCH, widthROLL;
+extern float widthSERVO_1, widthSERVO_2, widthSERVO_3, widthMOTOR_MAIN, widthMOTOR_TAIL, widthTHROTLE, widthPITCH, widthROLL;
 
 float minFrequency = 100, maxFrequency = 500;
 
 float minSERVO = 0.32, maxSERVO = 0.88;
-float minMOTOR = 0.4, maxMOTOR = 0.88;
+float minMOTOR = 0.32, maxMOTOR = 0.88;
 float minTHROTLE = 0.32, maxTHROTLE = 0.88;
 float servoAngle1 = 0.f/180.f*PI, servoAngle2 = 120.f/180.f*PI, servoAngle3 = 240.f/180.f*PI;
 float servoR1 = 1, servoR2 = 1, servoR3 = 1;
@@ -232,7 +233,7 @@ int main(void)
   uint8_t debugRes = 0;
   float data[DEBUGSCOPENUMOFCH] = {0.0f, 0.0f};
   float servo1Command =0, servo2Command = 0, servo3Command = 0;
-  float motorMainCommand = 0, throtleCommand = 0;
+  float motorMainCommand = 0, throtleCommand = 0, motorTailCommand=0;
   
   DebugScopeStartWrite(&debugData);
   // HAL_ADC_Start_DMA(&hadc1, aADCxConvertedData, ADC_CONVERTED_DATA_BUFFER_SIZE);
@@ -250,6 +251,7 @@ int main(void)
     dshot_send(&value, DSHOT_COMMAND_STOP); 
     HAL_Delay(1);
   }
+  HAL_Delay(1000);
 
   while (1)
   {
@@ -261,6 +263,10 @@ int main(void)
     motorMainCommand = (widthMOTOR_MAIN-minMOTOR)/(maxMOTOR-minMOTOR);
     motorMainCommand = min(motorMainCommand, 1);
     motorMainCommand = max(motorMainCommand, 0);
+
+    motorTailCommand = (widthMOTOR_TAIL-minMOTOR)/(maxMOTOR-minMOTOR);
+    motorTailCommand = min(motorTailCommand, 1);
+    motorTailCommand = max(motorTailCommand, 0);
 
     if isnan(widthTHROTLE)
         widthTHROTLE = minTHROTLE;
@@ -300,14 +306,15 @@ int main(void)
         
     float collective = throtleCommand;//-D;
 
-    //if (throtleCommand < 0.05 || motorMainCommand < 0.5)
-    if (motorMainCommand < 0.5)
+    //if (throtleCommand < 0.001)// || 
+    if (motorMainCommand < 0.01)
+    //if (motorTailCommand < 0.1)//(motorMainCommand < 0.1)//(motorTailCommand < 0.1)//motorMainCommand < 0.1)// && motorTailCommand < 0.1)
     {
         armed=false;
         totalSpeed = 0;
         int16_t value = 0;
         dshot_send(&value, DSHOT_COMMAND_STOP); 
-        HAL_Delay(1);
+        HAL_Delay(100);
         continue;
     }
     else if (rotorRPM < 10)  // if the rotor is not spinning, stop the motor
@@ -315,7 +322,7 @@ int main(void)
         if (armed)
         {
             veryLowSpeedCounter++;
-            if (veryLowSpeedCounter > 1000)
+            if (veryLowSpeedCounter > 10000)
             {
                 armed=false;
                 totalSpeed = 0;
@@ -335,12 +342,14 @@ int main(void)
                 dshot_send(&value, DSHOT_COMMAND_STOP); 
                 HAL_Delay(1);
             }
-            for (int i = 0; i < 320; i++)
+            HAL_Delay(1000);
+            for (int i = 0; i < 100; i++)
             {
-                int16_t value = 100;
-                dshot_send(&value, DSHOT_COMMAND_STOP); 
-                HAL_Delay(1);
-            }        
+                int16_t value = MINROTATION;
+                dshot_send(&value, DSHOT_COMMAND_VELOCITY); 
+                HAL_Delay(10);
+            }     
+            armed=true;
         }        
     } 
     else
@@ -357,7 +366,7 @@ int main(void)
     ampSpeed = inclination/0.54f*100;//
     ampSpeed = (ampSpeed > 80)?100:ampSpeed;
     ampSpeed = (ampSpeed < 5)?0:ampSpeed;
-    ampSpeed = ampSpeed*avgSpeed*3*1/2/100/2;
+    ampSpeed = ampSpeed*avgSpeed*3*1/2/100/2*3/2;
     // avgSpeed = (avgSpeed<50)?0:avgSpeed;
 
     // if (AMPSPEED_Voltage > 50)
@@ -379,9 +388,9 @@ int main(void)
     delta = ampSpeed*sine_m(spiAngle32 + phase + magneticPhaseOffset);
     totalSpeed = avgSpeed + delta;
     
-    totalSpeed+=200;
+    // totalSpeed+=50;
     totalSpeed = min(totalSpeed, 2000);
-    totalSpeed = max(totalSpeed, 0);
+    totalSpeed = max(totalSpeed, MINROTATION);
 
     dshot_send(&totalSpeed, DSHOT_COMMAND_VELOCITY);
 

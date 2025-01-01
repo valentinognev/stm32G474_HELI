@@ -214,7 +214,6 @@ void TIM1_UP_TIM16_IRQHandler(void)
     LL_TIM_ClearFlag_UPDATE(TIM1);
   }
   /* USER CODE END TIM1_UP_TIM16_IRQn 0 */
-
   /* USER CODE BEGIN TIM1_UP_TIM16_IRQn 1 */
 
   /* USER CODE END TIM1_UP_TIM16_IRQn 1 */
@@ -266,7 +265,6 @@ void TIM6_DAC_IRQHandler(void)
     updateRotorSpeed();
   }
   /* USER CODE END TIM6_DAC_IRQn 0 */
-
   /* USER CODE BEGIN TIM6_DAC_IRQn 1 */
 
   /* USER CODE END TIM6_DAC_IRQn 1 */
