@@ -307,8 +307,8 @@ int main(void)
     float collective = throtleCommand;//-D;
 
     //if (throtleCommand < 0.001)// || 
-    if (motorMainCommand < 0.01)
-    //if (motorTailCommand < 0.1)//(motorMainCommand < 0.1)//(motorTailCommand < 0.1)//motorMainCommand < 0.1)// && motorTailCommand < 0.1)
+    //if (motorMainCommand < 0.01)
+    if (motorTailCommand < 0.1)//(motorMainCommand < 0.1)//(motorTailCommand < 0.1)//motorMainCommand < 0.1)// && motorTailCommand < 0.1)
     {
         armed=false;
         totalSpeed = 0;

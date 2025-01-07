@@ -504,14 +504,16 @@ void TIM_PeriodElapsedCallback(TIM_TypeDef *htim)
   if (htim == TIM1)
   {
     float denom = TIM1->CCR1;
-    frequencyMOTOR_MAIN = ((float)(TIMCLOCK)/(TIM1->PSC+1))/denom;
-    frequencyMOTOR_TAIL = frequencyMOTOR_MAIN;
-    widthMOTOR_MAIN = (float)(TIM1->CCR2)/denom;
-    widthMOTOR_TAIL = (float)(TIM1->CCR3)/denom;
+    denom = max(denom, 1);
+    frequencyMOTOR_TAIL = ((float)(TIMCLOCK)/(TIM1->PSC+1))/denom;
+    frequencyMOTOR_MAIN = frequencyMOTOR_MAIN;
+    widthMOTOR_TAIL = (float)(TIM1->CCR2)/denom;
+    widthMOTOR_MAIN = (float)(TIM1->CCR3)/denom;
   }
   if (htim == TIM2)
   {
     denom = TIM2->CCR1;
+    denom = max(denom, 1);
     frequencyTHROTLE = ((float)(TIMCLOCK)/(TIM2->PSC+1))/denom;
     frequencyPITCH = frequencyROLL = frequencyTHROTLE;
     widthTHROTLE = (float)(TIM2->CCR2)/denom;
@@ -521,6 +523,7 @@ void TIM_PeriodElapsedCallback(TIM_TypeDef *htim)
   else if (htim == TIM3)
   {
     denom = TIM3->CCR1;
+    denom = max(denom, 1);
     frequencySERVO_1 = ((float)(TIMCLOCK)/(TIM3->PSC+1))/denom;
     frequencySERVO_3 = frequencySERVO_2 = frequencySERVO_1;
     widthSERVO_1 = (float)(TIM3->CCR2)/denom;

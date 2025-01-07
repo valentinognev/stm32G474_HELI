@@ -109,10 +109,10 @@ void Error_Handler(void);
 #define DSHOT_GPIO_Port GPIOB
 #define SERVO1_Pin GPIO_PIN_6
 #define SERVO1_GPIO_Port GPIOC
-#define ROTORMAIN_Pin GPIO_PIN_8
-#define ROTORMAIN_GPIO_Port GPIOA
-#define ROTORTAIL_Pin GPIO_PIN_10
+#define ROTORTAIL_Pin GPIO_PIN_8
 #define ROTORTAIL_GPIO_Port GPIOA
+#define ROTORMAIN_Pin GPIO_PIN_10
+#define ROTORMAIN_GPIO_Port GPIOA
 #define AS5047_NSS_Pin GPIO_PIN_15
 #define AS5047_NSS_GPIO_Port GPIOA
 
