@@ -50,7 +50,7 @@ void MX_SPI1_Init(void)
   hspi1.Init.CLKPolarity = SPI_POLARITY_LOW;
   hspi1.Init.CLKPhase = SPI_PHASE_2EDGE;
   hspi1.Init.NSS = SPI_NSS_HARD_OUTPUT;
-  hspi1.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_32;
+  hspi1.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_64;
   hspi1.Init.FirstBit = SPI_FIRSTBIT_MSB;
   hspi1.Init.TIMode = SPI_TIMODE_DISABLE;
   hspi1.Init.CRCCalculation = SPI_CRCCALCULATION_DISABLE;
@@ -129,7 +129,7 @@ void HAL_SPI_MspInit(SPI_HandleTypeDef* spiHandle)
     hdma_spi1_rx.Init.PeriphDataAlignment = DMA_PDATAALIGN_HALFWORD;
     hdma_spi1_rx.Init.MemDataAlignment = DMA_MDATAALIGN_HALFWORD;
     hdma_spi1_rx.Init.Mode = DMA_NORMAL;
-    hdma_spi1_rx.Init.Priority = DMA_PRIORITY_LOW;
+    hdma_spi1_rx.Init.Priority = DMA_PRIORITY_MEDIUM;
     if (HAL_DMA_Init(&hdma_spi1_rx) != HAL_OK)
     {
       Error_Handler();
@@ -146,7 +146,7 @@ void HAL_SPI_MspInit(SPI_HandleTypeDef* spiHandle)
     hdma_spi1_tx.Init.PeriphDataAlignment = DMA_PDATAALIGN_HALFWORD;
     hdma_spi1_tx.Init.MemDataAlignment = DMA_MDATAALIGN_HALFWORD;
     hdma_spi1_tx.Init.Mode = DMA_NORMAL;
-    hdma_spi1_tx.Init.Priority = DMA_PRIORITY_LOW;
+    hdma_spi1_tx.Init.Priority = DMA_PRIORITY_MEDIUM;
     if (HAL_DMA_Init(&hdma_spi1_tx) != HAL_OK)
     {
       Error_Handler();
@@ -194,7 +194,7 @@ void SPI_TransmitReceive_DMA(uint16_t* transferData, uint16_t* receiveData, uint
   for (uint16_t i=0; i<size; i++)
   {
     HAL_GPIO_WritePin(  AS5047_CS_GPIO_Port,   AS5047_CS_Pin, GPIO_PIN_RESET); spiTxFinished = 0;spiRxFinished = 0;
-    uint8_t res = HAL_SPI_TransmitReceive_DMA(&hspi1, (uint32_t)(transferData+i), (uint32_t)(receiveData+i), 1) ;
+    uint8_t res = HAL_SPI_TransmitReceive_DMA(&hspi1, (uint8_t*)(transferData+i), (uint8_t*)(receiveData+i), 1) ;
     if(res!= HAL_OK) // after we will use bytesize if we want to optimize
         res = res;
 
@@ -216,7 +216,7 @@ void SPI_Transfer_DMA(uint16_t* transferData, uint16_t size)
   for (uint16_t i=0; i<size; i++)
   {
     HAL_GPIO_WritePin(  AS5047_CS_GPIO_Port,   AS5047_CS_Pin, GPIO_PIN_RESET); spiTxFinished = 0;
-    uint8_t res = HAL_SPI_Transmit_DMA(&hspi1, (uint32_t)(transferData+i), 1) ;
+    uint8_t res = HAL_SPI_Transmit_DMA(&hspi1, (uint8_t*)(transferData+i), 1) ;
     if(res!= HAL_OK) // after we will use bytesize if we want to optimize
         res = res;
 
@@ -233,7 +233,7 @@ void SPI_Receive_DMA(uint16_t* receiveData, uint16_t size)
   for (uint16_t i=0; i<size; i++)
   {
     HAL_GPIO_WritePin(  AS5047_CS_GPIO_Port,   AS5047_CS_Pin, GPIO_PIN_RESET); spiRxFinished = 0;
-    uint8_t res = HAL_SPI_Receive_DMA(&hspi1, (uint32_t)(receiveData+i), 1) ;
+    uint8_t res = HAL_SPI_Receive_DMA(&hspi1, (uint8_t*)(receiveData+i), 1) ;
     if(res!= HAL_OK) // after we will use bytesize if we want to optimize
         res = res;
     // LL_DMA_DisableChannel(DMA2, LL_DMA_CHANNEL_4);

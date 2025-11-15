@@ -120,7 +120,7 @@ static void dshot_start_pwm()
 {
   // Start the timer channel now.
     // Enabling/disabling DMA request can restart a new cycle without PWM start/stop.
-  if (HAL_TIM_PWM_Start_DMA(&MOTOR1_TIM, MOTOR_1_TIM_CHANNEL, (uint32_t)motor1_dmabuffer, DSHOT_DMA_BUFFER_SIZE))
+  if (HAL_TIM_PWM_Start_DMA(&MOTOR1_TIM, MOTOR_1_TIM_CHANNEL, (const uint32_t *)motor1_dmabuffer, DSHOT_DMA_BUFFER_SIZE))
   {
     /* Starting Error */
     // Error_Handler();

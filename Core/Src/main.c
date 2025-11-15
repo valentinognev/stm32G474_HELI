@@ -55,8 +55,8 @@
 #define MAXVOLTAGE (3300)
 #define MINSPEED (0)
 #define MAXSPEED (2000)
-#define SERVOCOMMAND (0)
-#define MINROTATION  (100)
+#define SERVOCOMMAND (0)  // defines whether the rotor inclination is controlled by the three servo commands or the roll and pitch command
+const int16_t MINROTATION  = 100;
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -110,9 +110,9 @@ extern float widthSERVO_1, widthSERVO_2, widthSERVO_3, widthMOTOR_MAIN, widthMOT
 
 float minFrequency = 100, maxFrequency = 500;
 
-float minSERVO = 0.32, maxSERVO = 0.88;
-float minMOTOR = 0.32, maxMOTOR = 0.88;
-float minTHROTLE = 0.32, maxTHROTLE = 0.88;
+float minSERVO = 0.40, maxSERVO = 0.80;
+float minMOTOR = 0.40, maxMOTOR = 0.76;
+float minTHROTLE = 0.40, maxTHROTLE = 0.80;
 float servoAngle1 = 0.f/180.f*PI, servoAngle2 = 120.f/180.f*PI, servoAngle3 = 240.f/180.f*PI;
 float servoR1 = 1, servoR2 = 1, servoR3 = 1;
 float servo1Nominal = 0.47652, servo2Nominal = 0.47931, servo3Nominal = 0.47848;
@@ -123,6 +123,7 @@ float minAttwidth = 0.3292, maxAttwidth = 0.8894, zeroAttwidth = 0.6093;
 static float sinS[4]={0,0,0,0};
 static float cosS[4]={0,0,0,0};
 
+uint8_t errorFlag[20]={99, 99, 99, 99,99,99,99,99,99,99,99,99,99,99,99,99,99,99,99,99};
 static int32_t spiAngle32 = 0, oldRotorAngle = 0, veryLowSpeedCounter = 0;
 static float rotorRPM = 0;
 
@@ -133,13 +134,17 @@ static int32_t magneticPhaseOffset = -15; // phase angle offset (degrees) due to
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
 /* USER CODE BEGIN PFP */
-uint16_t VoltageToAVGSpeed(const uint16_t voltage);
-uint16_t VoltageToAmpSpeed(const uint16_t voltage, const uint16_t curspeed);
-uint16_t VoltageToPhase(const uint16_t voltage);
+void getAngleFromAS5047D(int32_t *angle, uint8_t *errorFlag);
 void servo2planeABCD(const float servo1, const float servo2, const float servo3, 
                       float *A, float *B, float *C, float *D);
 uint8_t calculateFreqAndWidth(const circ_buf_t *riseData, const circ_buf_t *fallData, const float period, float *frequency, float *width);
-
+void getServoCommands(float *servo1Command, float *servo2Command, float *servo3Command, 
+                      float *motorMainCommand, float *motorTailCommand, 
+                      float *throtleCommand, float *rollCommand, float *pitchCommand);
+void calculateHeadingAndInclination(const float servo1Command, const float servo2Command, const float servo3Command, 
+                                    const float rollCommand, const float pitchCommand, 
+                                    float *heading, float *inclination);
+void convertCommandsToMainRotSpeed(const float collective, const float inclination, const float heading, uint16_t *totalSpeed);
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -163,8 +168,8 @@ int main(void)
 {
 
   /* USER CODE BEGIN 1 */
-  cosS[1] = cosf(servoAngle1); cosS[2] = cosf(servoAngle2); cosS[3] = cosf(servoAngle3);
-  sinS[1] = sinf(servoAngle1); sinS[2] = sinf(servoAngle2); sinS[3] = sinf(servoAngle3);
+    cosS[1] = cosf(servoAngle1); cosS[2] = cosf(servoAngle2); cosS[3] = cosf(servoAngle3);
+    sinS[1] = sinf(servoAngle1); sinS[2] = sinf(servoAngle2); sinS[3] = sinf(servoAngle3);
   /* USER CODE END 1 */
 
   /* MCU Configuration--------------------------------------------------------*/
@@ -196,217 +201,170 @@ int main(void)
   MX_USB_PCD_Init();
   /* USER CODE BEGIN 2 */
 
-   /* Initiaize AS5047D */
-  uint16_t nop,AGC;
+    /* Initiaize AS5047D */
+    uint16_t nop,AGC;
 
-  uint8_t errorFlag[20]={99, 99, 99, 99,99,99,99,99,99,99,99,99,99,99,99,99,99,99,99,99};
-  errorFlag[0] = AS5047D_Read(  AS5047_CS_GPIO_Port,   AS5047_CS_Pin, AS5047D_NOP, &nop);
-  errorFlag[1] = AS5047D_Get_AGC_Value(&AGC);
-  errorFlag[2] = AS5047D_Read(  AS5047_CS_GPIO_Port,   AS5047_CS_Pin, AS5047D_ERRFL, &ERRFL);
-  errorFlag[3] = AS5047D_Read(  AS5047_CS_GPIO_Port,   AS5047_CS_Pin, AS5047D_ERRFL, &ERRFL);
-  errorFlag[4] = AS5047D_Read(  AS5047_CS_GPIO_Port,   AS5047_CS_Pin, AS5047D_PROG, &PROG);
-  errorFlag[5] = AS5047D_Read(  AS5047_CS_GPIO_Port,   AS5047_CS_Pin, AS5047D_ANGLEUNC, &ANGLEUNC);
-  errorFlag[6] = AS5047D_Read(  AS5047_CS_GPIO_Port,   AS5047_CS_Pin, AS5047D_CORDICMAG, &CORDICMAG);
-  errorFlag[7] = AS5047D_Read(  AS5047_CS_GPIO_Port,   AS5047_CS_Pin, AS5047D_ANGLECOM, &ANGLECOM);
-  errorFlag[8] = AS5047D_Read(  AS5047_CS_GPIO_Port,   AS5047_CS_Pin, AS5047D_ZPOSM, &ZPOSM);
-  errorFlag[9] = AS5047D_Read(  AS5047_CS_GPIO_Port,   AS5047_CS_Pin, AS5047D_ZPOSL, &ZPOSL);
-  errorFlag[10] = AS5047D_Read(  AS5047_CS_GPIO_Port,   AS5047_CS_Pin, AS5047D_SETTINGS1, &SETTINGS1);
-  errorFlag[11] = AS5047D_Read(  AS5047_CS_GPIO_Port,   AS5047_CS_Pin, AS5047D_SETTINGS2, &SETTINGS2);
+    errorFlag[0] = AS5047D_Read(  AS5047_CS_GPIO_Port,   AS5047_CS_Pin, AS5047D_NOP, &nop);
+    errorFlag[1] = AS5047D_Get_AGC_Value(&AGC);
+    errorFlag[2] = AS5047D_Read(  AS5047_CS_GPIO_Port,   AS5047_CS_Pin, AS5047D_ERRFL, &ERRFL);
+    errorFlag[3] = AS5047D_Read(  AS5047_CS_GPIO_Port,   AS5047_CS_Pin, AS5047D_ERRFL, &ERRFL);
+    errorFlag[4] = AS5047D_Read(  AS5047_CS_GPIO_Port,   AS5047_CS_Pin, AS5047D_PROG, &PROG);
+    // errorFlag[5] = AS5047D_Read(  AS5047_CS_GPIO_Port,   AS5047_CS_Pin, AS5047D_ANGLEUNC, &ANGLEUNC);
+    // errorFlag[6] = AS5047D_Read(  AS5047_CS_GPIO_Port,   AS5047_CS_Pin, AS5047D_CORDICMAG, &CORDICMAG);
+    errorFlag[7] = AS5047D_Read(  AS5047_CS_GPIO_Port,   AS5047_CS_Pin, AS5047D_ANGLECOM, &ANGLECOM);
+    // errorFlag[8] = AS5047D_Read(  AS5047_CS_GPIO_Port,   AS5047_CS_Pin, AS5047D_ZPOSM, &ZPOSM);
+    // errorFlag[9] = AS5047D_Read(  AS5047_CS_GPIO_Port,   AS5047_CS_Pin, AS5047D_ZPOSL, &ZPOSL);
+    // errorFlag[10] = AS5047D_Read(  AS5047_CS_GPIO_Port,   AS5047_CS_Pin, AS5047D_SETTINGS1, &SETTINGS1);
+    // errorFlag[11] = AS5047D_Read(  AS5047_CS_GPIO_Port,   AS5047_CS_Pin, AS5047D_SETTINGS2, &SETTINGS2);
 
-  errorFlag[12] = AS5047D_Get_True_Angle_Value(&true_angle);
+    errorFlag[12] = AS5047D_Get_True_Angle_Value(&true_angle);
 
-  dshot_init(DSHOT600);
+    dshot_init(DSHOT600);
 
-  //ProjectMain();
+    //ProjectMain();
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
 
 
-  int32_t avgSpeed = 0;
-  int32_t ampSpeed = 0;
-  int32_t phase = 0;
-
-  uint16_t totalSpeed = 0;
-  int32_t delta = 0;
-  uint8_t debugRes = 0;
-  float data[DEBUGSCOPENUMOFCH] = {0.0f, 0.0f};
-  float servo1Command =0, servo2Command = 0, servo3Command = 0;
-  float motorMainCommand = 0, throtleCommand = 0, motorTailCommand=0;
-  
-  DebugScopeStartWrite(&debugData);
-  // HAL_ADC_Start_DMA(&hadc1, aADCxConvertedData, ADC_CONVERTED_DATA_BUFFER_SIZE);
-  LL_TIM_EnableCounter(TIM6);
-
-  LL_TIM_EnableCounter(TIM1);
-  LL_TIM_EnableCounter(TIM2);
-  LL_TIM_EnableCounter(TIM3);
-  LL_TIM_EnableCounter(TIM4);
-   /*## Start PWM signal generation in DMA mode ############################*/ 
-  
-  for (int i = 0; i < 320; i++)
-  {
-    int16_t value = 0;
-    dshot_send(&value, DSHOT_COMMAND_STOP); 
-    HAL_Delay(1);
-  }
-  HAL_Delay(1000);
-
-  while (1)
-  {
-    float period = 1.f/(TIMCLOCK/TIM2->PSC);;
-    servo1Command = (widthSERVO_1-minSERVO)/(maxSERVO-minSERVO);//-servo1Nominal;
-    servo2Command = (widthSERVO_2-minSERVO)/(maxSERVO-minSERVO);//-servo2Nominal;
-    servo3Command = (widthSERVO_3-minSERVO)/(maxSERVO-minSERVO);//-servo3Nominal;
-
-    motorMainCommand = (widthMOTOR_MAIN-minMOTOR)/(maxMOTOR-minMOTOR);
-    motorMainCommand = min(motorMainCommand, 1);
-    motorMainCommand = max(motorMainCommand, 0);
-
-    motorTailCommand = (widthMOTOR_TAIL-minMOTOR)/(maxMOTOR-minMOTOR);
-    motorTailCommand = min(motorTailCommand, 1);
-    motorTailCommand = max(motorTailCommand, 0);
-
-    if isnan(widthTHROTLE)
-        widthTHROTLE = minTHROTLE;
-    throtleCommand = (widthTHROTLE-minTHROTLE)/(maxTHROTLE-minTHROTLE);
-    throtleCommand = min(throtleCommand, 1);
-    throtleCommand = max(throtleCommand, 0);
-
-    if isnan(widthROLL)
-        widthROLL = zeroAttwidth;
-    rollCommand = (widthROLL-zeroAttwidth)/(maxAttwidth-minAttwidth);
-    rollCommand = min(rollCommand, 1);
-    rollCommand = max(rollCommand, -1);
-
-    if isnan(widthPITCH)
-        widthPITCH = zeroAttwidth;
-    pitchCommand = (widthPITCH-zeroAttwidth)/(maxAttwidth-minAttwidth);
-    pitchCommand = min(pitchCommand, 1);
-    pitchCommand = max(pitchCommand, -1);
+    enum State state = STATE_DISARMED;
+    float heading = 0, inclination = 0;  uint16_t totalSpeed = 0;
+    int32_t delta = 0;
+    uint8_t debugRes = 0;
+    float data[DEBUGSCOPENUMOFCH] = {0.0f, 0.0f};
+    float servo1Command =0, servo2Command = 0, servo3Command = 0;
+    float motorMainCommand = 0, throtleCommand = 0, motorTailCommand=0;
     
-    float heading = 0, inclination = 0;
-    if (SERVOCOMMAND)
-    {
-        float A, B, C, D;
-        servo2planeABCD(servo1Command, servo2Command, servo3Command, &A, &B, &C, &D);
-        //float heading = atan2f(B, A);
-        heading = atan2_m(B, A);
-        //float inclination = acos(C);
-        inclination = acos_nvidia(C);
-    }
-    else
-    {
-        heading = atan2_m(rollCommand*latFac, pitchCommand*lonFac);
-        inclination = pitchCommand*pitchCommand + rollCommand*rollCommand;
-        inclination = sqrt(inclination);
-        inclination = min(inclination, 1);
-    }
-        
-    float collective = throtleCommand;//-D;
+    DebugScopeStartWrite(&debugData);
+    // HAL_ADC_Start_DMA(&hadc1, aADCxConvertedData, ADC_CONVERTED_DATA_BUFFER_SIZE);
+    LL_TIM_EnableCounter(TIM6);
+    LL_TIM_EnableIT_UPDATE(TIM6);
 
-    //if (throtleCommand < 0.001)// || 
-    //if (motorMainCommand < 0.01)
-    if (motorTailCommand < 0.1)//(motorMainCommand < 0.1)//(motorTailCommand < 0.1)//motorMainCommand < 0.1)// && motorTailCommand < 0.1)
+
+    LL_TIM_EnableCounter(TIM1);
+    LL_TIM_EnableCounter(TIM2);
+    LL_TIM_EnableCounter(TIM3);
+    LL_TIM_EnableCounter(TIM4);
+    /*## Start PWM signal generation in DMA mode ############################*/ 
+    
+    for (int i = 0; i < 320; i++)
     {
-        armed=false;
-        totalSpeed = 0;
-        int16_t value = 0;
-        dshot_send(&value, DSHOT_COMMAND_STOP); 
-        HAL_Delay(100);
-        continue;
+      int16_t value = 0;
+      dshot_send(&value, DSHOT_COMMAND_STOP); 
+      HAL_Delay(1);
     }
-    else if (rotorRPM < 10)  // if the rotor is not spinning, stop the motor
+    // HAL_Delay(1000);
+
+    uint16_t dtus;
+    bool entry = false;
+    uint16_t armingCounter = 0;
+    while (1)
     {
-        if (armed)
+        // // Read the angle from the AS5047D encoder
+        updateRotorSpeed();
+
+        getServoCommands(&servo1Command, &servo2Command, &servo3Command, &motorMainCommand, &motorTailCommand, &throtleCommand, &rollCommand, &pitchCommand);
+
+        calculateHeadingAndInclination(servo1Command, servo2Command, servo3Command, rollCommand, pitchCommand, &heading, &inclination);
+
+        convertCommandsToMainRotSpeed(throtleCommand, inclination, heading, &totalSpeed);
+        
+        //   State Machine
+        switch (state)
         {
-            veryLowSpeedCounter++;
-            if (veryLowSpeedCounter > 10000)
-            {
-                armed=false;
+            //////////////////////////////////////////////////////////////////////////////////////
+            case STATE_DISARMED:
+                // Stop the main motor
                 totalSpeed = 0;
-                dshot_send(&totalSpeed, DSHOT_COMMAND_STOP);
-                HAL_Delay(3000); //HAL_Delay(10000);
-                veryLowSpeedCounter = 0;
-                continue;
-            }
-        }   
-        else
-        {
-            armed=true;
-            veryLowSpeedCounter = 0;
-            for (int i = 0; i < 320; i++)
-            {
                 int16_t value = 0;
                 dshot_send(&value, DSHOT_COMMAND_STOP); 
                 HAL_Delay(1);
-            }
-            HAL_Delay(1000);
-            for (int i = 0; i < 100; i++)
-            {
-                int16_t value = MINROTATION;
-                dshot_send(&value, DSHOT_COMMAND_VELOCITY); 
-                HAL_Delay(10);
-            }     
-            armed=true;
-        }        
-    } 
-    else
-    {
-      veryLowSpeedCounter = 0;
-    }
-      
-    avgSpeed = collective*2000.;
-    avgSpeed = (avgSpeed>1950)?2000:avgSpeed;
-    avgSpeed = (avgSpeed<50)?0:avgSpeed;
-    // if (AVGSPEED_Voltage > 50)
-    //   avgSpeed = VoltageToAVGSpeed(AVGSPEED_Voltage);
 
-    ampSpeed = inclination/0.54f*100;//
-    ampSpeed = (ampSpeed > 80)?100:ampSpeed;
-    ampSpeed = (ampSpeed < 5)?0:ampSpeed;
-    ampSpeed = ampSpeed*avgSpeed*3*1/2/100/2*3/2;
-    // avgSpeed = (avgSpeed<50)?0:avgSpeed;
+                if ((motorTailCommand > 0.05) || (motorMainCommand > 0.05))
+                {
+                    state = STATE_ARMING;
+                    entry = true;
+                }
+                else
+                {
+                    continue;
+                }
+                break;
+            //////////////////////////////////////////////////////////////////////////////////////
+            case STATE_ARMING:
+            // Arming the motor in two steps:
+            // 1. Spin the motor at a very low speed
+            // 2. If the rotor is spinning, arm the motor
+            // 3. If the rotor is not spinning, stop the motor
+                if (entry)
+                {
+                    entry = false;
+                    armingCounter = 0;
+                }
+                veryLowSpeedCounter = 0;
+                armingCounter++;
 
-    // if (AMPSPEED_Voltage > 50)
-    //   ampSpeed = VoltageToAmpSpeed(AMPSPEED_Voltage, avgSpeed*3/4);
-    
-    phase = heading*180/3.14159;
-    // if (PHASE_Voltage > 50)
-    //   phase = VoltageToPhase(PHASE_Voltage);
+                dshot_send(&MINROTATION, DSHOT_COMMAND_VELOCITY); 
+                HAL_Delay(1);
 
-    errorFlag[7] = AS5047D_Read(  AS5047_CS_GPIO_Port,   AS5047_CS_Pin, AS5047D_ANGLECOM, &ANGLECOM);
-    spiAngle32 = ANGLECOM * 360 / 16384;
-    // errorFlag[15] = AS5047D_Get_True_Angle_Value(&spiAngle);
-    if (errorFlag[7] != 0)
-    {
-      errorFlag[16] = AS5047D_Read(AS5047_CS_GPIO_Port, AS5047_CS_Pin, AS5047D_ERRFL, &ERRFL);
-      continue;
-    }
+                if (armingCounter > 1000 && rotorRPM > 10) // if the rotor is spinning, arm the motor
+                {
+                  state = STATE_ARMED;
+                }
+                else if (armingCounter > 3000 && rotorRPM < 10) // if the rotor is not spinning, stop the motor
+                {
+                  state = STATE_DISARMED;
+                }
+                break;
+            //////////////////////////////////////////////////////////////////////////////////////
+            case STATE_ARMED:
+                // If the motor is not commanded to spin, disarm the motor
+                if (motorMainCommand < 0.05)
+                {
+                  state = STATE_DISARMED;
+                  continue;
+                }
+                if (rotorRPM < 10) // if the rotor is not spinning start the timer to check if the rotor is spinning
+                {
+                    veryLowSpeedCounter++;
+                    if (veryLowSpeedCounter > 10000) // if the rotor is not spinning for too long, stop the motor
+                    {
+                        totalSpeed = 0;
+                        dshot_send(&totalSpeed, DSHOT_COMMAND_STOP);
+                        HAL_Delay(3000); //HAL_Delay(10000);
+                        veryLowSpeedCounter = 0;
+                        state = STATE_DISARMED;
+                        continue;
+                    }
+                }
+                else // if the rotor is spinning, reset the timer
+                {
+                  veryLowSpeedCounter = 0;
+                }
+            
+                dshot_send(&totalSpeed, DSHOT_COMMAND_VELOCITY);
+            
+                // data[0] = (float)spiAngle32;
+                // data[1] = (float)totalSpeed;
+                // data[2] = (float)delta;
+                // debugRes = DebugScopeInsertData(&debugData, data);
+                // if (debugRes == NO_MORE_PLACE_TO_WRITE)
+                // {
+                //   DebugScopeStartWrite(&debugData);
+                // }
 
-    delta = ampSpeed*sine_m(spiAngle32 + phase + magneticPhaseOffset);
-    totalSpeed = avgSpeed + delta;
-    
-    // totalSpeed+=50;
-    totalSpeed = min(totalSpeed, 2000);
-    totalSpeed = max(totalSpeed, MINROTATION);
+              break;
+        }
 
-    dshot_send(&totalSpeed, DSHOT_COMMAND_VELOCITY);
 
-    data[0] = (float)spiAngle32;
-    data[1] = (float)totalSpeed;
-    data[2] = (float)delta;
-    debugRes = DebugScopeInsertData(&debugData, data);
-    if (debugRes == NO_MORE_PLACE_TO_WRITE)
-    {
-      DebugScopeStartWrite(&debugData);
-    }
+
+          
 
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-  }
+    }
   /* USER CODE END 3 */
 }
 
@@ -460,8 +418,11 @@ void SystemClock_Config(void)
 /* USER CODE BEGIN 4 */
 void updateRotorSpeed()
 {
-  const float freq = ((float)(TIMCLOCK)/(TIM6->PSC+1)/(TIM6->ARR+1));
-  rotorRPM = fabsf((oldRotorAngle - spiAngle32)/360.f*freq*60);
+  getAngleFromAS5047D(&spiAngle32, errorFlag);
+  float dt=(float)TIM6->CNT/1e6;
+  TIM6->CNT = 0;
+  
+  rotorRPM = fabsf((oldRotorAngle - spiAngle32)*60.f/360.f/dt);
   oldRotorAngle = spiAngle32;
 }
 
@@ -489,21 +450,6 @@ uint8_t calculateFreqAndWidth(const circ_buf_t *riseData, const circ_buf_t *fall
   return 1;
 }
 
-uint16_t VoltageToAVGSpeed(const uint16_t voltage)
-{
-  return (uint16_t) ((uint32_t)(voltage - MINVOLTAGE) * (MAXSPEED - MINSPEED)/(MAXVOLTAGE - MINVOLTAGE) + MINSPEED);
-}
-
-uint16_t VoltageToAmpSpeed(const uint16_t voltage, const uint16_t curspeed)
-{
-  return (uint16_t)((uint32_t)(voltage - MINVOLTAGE)* curspeed/(MAXVOLTAGE - MINVOLTAGE) );
-}
-
-uint16_t VoltageToPhase(const uint16_t voltage)
-{
-  return (uint16_t)((uint32_t)(voltage - MINVOLTAGE)* 360 /(MAXVOLTAGE - MINVOLTAGE)) ;
-}
-
 void servo2planeABCD(const float servo1, const float servo2, const float servo3, 
                       float *A, float *B, float *C, float *D)
 {
@@ -525,6 +471,106 @@ void servo2planeABCD(const float servo1, const float servo2, const float servo3,
   *C = n.z;
 }
 
+void getServoCommands(float *servo1Command, float *servo2Command, float *servo3Command, 
+                      float *motorMainCommand, float *motorTailCommand, 
+                      float *throtleCommand, float *rollCommand, float *pitchCommand)
+{
+    // Calculate the period of the servo signals
+    float period = 1.f/(TIMCLOCK/TIM2->PSC);
+    *servo1Command = (widthSERVO_1-minSERVO)/(maxSERVO-minSERVO);//-servo1Nominal;
+    *servo2Command = (widthSERVO_2-minSERVO)/(maxSERVO-minSERVO);//-servo2Nominal;
+    *servo3Command = (widthSERVO_3-minSERVO)/(maxSERVO-minSERVO);//-servo3Nominal;
+
+    *motorMainCommand = (widthMOTOR_MAIN-minMOTOR)/(maxMOTOR-minMOTOR);
+    *motorMainCommand = min(*motorMainCommand, 1);
+    *motorMainCommand = max(*motorMainCommand, 0);
+
+    *motorTailCommand = (widthMOTOR_TAIL-minMOTOR)/(maxMOTOR-minMOTOR);
+    *motorTailCommand = min(*motorTailCommand, 1);
+    *motorTailCommand = max(*motorTailCommand, 0);
+
+    // Calculate the throttle command
+    if isnan(widthTHROTLE)
+        widthTHROTLE = minTHROTLE;
+    *throtleCommand = (widthTHROTLE-minTHROTLE)/(maxTHROTLE-minTHROTLE);
+    *throtleCommand = min(*throtleCommand, 1);
+    *throtleCommand = max(* throtleCommand, 0);
+
+    // Calculate the roll command
+    if isnan(widthROLL)
+        widthROLL = zeroAttwidth;
+    *rollCommand = (widthROLL-zeroAttwidth)/(maxAttwidth-minAttwidth);
+    *rollCommand = min(*rollCommand, 1);
+    *rollCommand = max(*rollCommand, -1);
+
+    // Calculate the pitch command
+    if isnan(widthPITCH)
+        widthPITCH = zeroAttwidth;
+    *pitchCommand = (widthPITCH-zeroAttwidth)/(maxAttwidth-minAttwidth);
+    *pitchCommand = min(*pitchCommand, 1);
+    *pitchCommand = max(*pitchCommand, -1);
+}
+
+void convertCommandsToMainRotSpeed(const float collective, const float inclination, const float heading, uint16_t *totalSpeed)
+{
+    // Calculate the average speed
+    float avgSpeed = collective*2000.;
+    avgSpeed = (avgSpeed>1950)?2000:avgSpeed;
+    avgSpeed = (avgSpeed<50)?0:avgSpeed;
+    // if (AVGSPEED_Voltage > 50)
+    //   avgSpeed = VoltageToAVGSpeed(AVGSPEED_Voltage);
+
+    float ampSpeed = inclination/0.54f*100;//
+    ampSpeed = (ampSpeed > 80)?100:ampSpeed;
+    ampSpeed = (ampSpeed < 5)?0:ampSpeed;
+    ampSpeed = ampSpeed*avgSpeed*3*1/2/100/2*3/2;
+    
+    float phase = heading*180/3.14159;
+
+    float delta = ampSpeed*sine_m(spiAngle32 + phase + magneticPhaseOffset);
+    *totalSpeed = (uint16_t)(avgSpeed + delta);
+    
+    // totalSpeed+=50;
+    *totalSpeed = min(*totalSpeed, (uint16_t)2000);
+    *totalSpeed = max(*totalSpeed, (uint16_t)MINROTATION);
+}
+
+void calculateHeadingAndInclination(const float servo1Command, const float servo2Command, const float servo3Command, 
+                                    const float rollCommand, const float pitchCommand, 
+                                    float *heading, float *inclination)
+{
+    // Calculate the heading and inclination
+    if (SERVOCOMMAND)
+    {
+        // Calculate the heading and inclination using the three servo commands
+        float A, B, C, D;
+        servo2planeABCD(servo1Command, servo2Command, servo3Command, &A, &B, &C, &D);
+        //float heading = atan2f(B, A);
+        *heading = atan2_m(B, A);
+        //float inclination = acos(C);
+        *inclination = acos_nvidia(C);
+    }
+    else
+    {
+        // Calculate the heading and inclination using the roll and pitch commands
+        *heading = atan2_m(rollCommand*latFac, pitchCommand*lonFac);
+        *inclination = sqrt(pitchCommand*pitchCommand + rollCommand*rollCommand);
+        *inclination = min(*inclination, 1);
+    }
+}
+
+void getAngleFromAS5047D(int32_t *angle, uint8_t *errorFlag)
+{
+    uint16_t ANGLECOM;
+    // Read the angle from the AS5047D encoder
+    errorFlag[7] = AS5047D_Read(  AS5047_CS_GPIO_Port,   AS5047_CS_Pin, AS5047D_ANGLECOM, &ANGLECOM);
+    *angle = (int32_t)ANGLECOM * 360 / 16384;
+    // errorFlag[15] = AS5047D_Get_True_Angle_Value(&spiAngle);
+    if (errorFlag[7] != 0)
+    {
+      errorFlag[16] = AS5047D_Read(AS5047_CS_GPIO_Port, AS5047_CS_Pin, AS5047D_ERRFL, &ERRFL);
+    }
+}
 /* USER CODE END 4 */
 
 /**
@@ -541,8 +587,7 @@ void Error_Handler(void)
   }
   /* USER CODE END Error_Handler_Debug */
 }
-
-#ifdef  USE_FULL_ASSERT
+#ifdef USE_FULL_ASSERT
 /**
   * @brief  Reports the name of the source file and the source line number
   *         where the assert_param error has occurred.

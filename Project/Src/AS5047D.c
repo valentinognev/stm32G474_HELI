@@ -8,6 +8,7 @@
 #include "AS5047D.h"
 #include <stdint.h>
 #include "stm32g4xx_it.h"
+#include "spi.h"
 
 extern uint8_t spiTxFinished;
 extern uint8_t spiRxFinished;

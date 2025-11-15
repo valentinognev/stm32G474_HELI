@@ -43,6 +43,7 @@ extern "C" {
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
+#include "stm32g4xx_hal_tim.h"
 #include "stm32g474xx.h"
 #include "stm32g4xx_ll_tim.h"
 #include "stm32g4xx_ll_bus.h"
@@ -131,6 +132,12 @@ void Error_Handler(void);
 
 #define min(a,b) ((a) < (b) ? (a) : (b))
 #define max(a,b) ((a) > (b) ? (a) : (b))
+
+enum  State{
+  STATE_DISARMED = 0,
+  STATE_ARMING = 1,
+  STATE_ARMED = 2,
+};
 
 void updateRotorSpeed();
 /* USER CODE END Private defines */
